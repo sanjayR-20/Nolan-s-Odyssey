@@ -1,0 +1,2308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Odyssey - Ticket Hub</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollToPlugin.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/howler@2.2.3/dist/howler.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;700&family=Roboto:wght@400;700&family=Cinzel:wght@400;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      overflow-x: hidden;
+      background: linear-gradient(135deg, #e0f2fe, #dbeafe, #ede9fe);
+      cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%2322d3ee" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></svg>') 12 12, auto;
+    }
+    
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 10px;
+      background: #dbeafe;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(to bottom, #22d3ee, #3b82f6);
+      border-radius: 5px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(to bottom, #06b6d4, #2563eb);
+    }
+    
+    /* Hero Section */
+    .hero {
+      background: linear-gradient(135deg, #bae6fd, #93c5fd);
+      position: relative;
+      overflow: hidden;
+      min-height: 100vh;
+    }
+    .stars {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .star {
+      position: absolute;
+      background: white;
+      border-radius: 50%;
+      animation: twinkle var(--duration) infinite alternate ease-in-out;
+      opacity: 0;
+    }
+    @keyframes twinkle {
+      0% { opacity: 0.1; transform: scale(0.5); }
+      50% { opacity: var(--opacity); transform: scale(1); }
+      100% { opacity: 0.1; transform: scale(0.5); }
+    }
+    .spaceship {
+      position: absolute;
+      top: 15%;
+      left: -300px;
+      width: 500px;
+      height: 250px;
+      background: url('https://www.pngall.com/wp-content/uploads/2/Spaceship-PNG-Free-Download.png') no-repeat center/contain;
+      animation: flyAcross 15s linear infinite;
+      opacity: 0.8;
+      z-index: 1;
+      filter: drop-shadow(0 0 10px rgba(0, 195, 255, 0.7));
+    }
+    .comet {
+      position: absolute;
+      width: 150px;
+      height: 150px;
+      background: url('https://www.pngall.com/wp-content/uploads/2016/05/Comet-PNG-Clipart.png') no-repeat center/contain;
+      z-index: 2;
+      opacity: 0;
+    }
+    
+    /* Animations */
+    .animate-logo {
+      animation: glow 3s ease-in-out infinite;
+    }
+    .animate-card {
+      animation: fadeInUp 1s ease-out;
+    }
+    
+    /* 3D Scene Container */
+    #space-scene {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+    
+    /* Interactive Spaceship */
+    #interactive-spaceship {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+    
+    /* Ticket Cards */
+    .flip-card {
+      perspective: 1200px;
+      height: 420px;
+    }
+    .flip-card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transition: transform 1s cubic-bezier(0.4, 0, 0.2, 1);
+      transform-style: preserve-3d;
+      box-shadow: 0 15px 35px rgba(0, 195, 255, 0.3);
+    }
+    .flip-card-front, .flip-card-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      border-radius: 0.5rem;
+      overflow: hidden;
+      background: linear-gradient(145deg, #f0f9ff, #dbeafe);
+      border: 1px solid rgba(34, 211, 238, 0.3);
+    }
+    .flip-card-back {
+      transform: rotateY(180deg);
+      background: linear-gradient(145deg, #dbeafe, #e0f2fe);
+    }
+    .flipped .flip-card-inner {
+      transform: rotateY(180deg);
+    }
+    
+    /* Enhanced Book Section */
+    .book-container {
+      perspective: 2000px;
+      position: relative;
+      height: 450px;
+    }
+    .book-cover {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(to right, #3b82f6, #1d4ed8);
+      border: 1px solid #d4c9a8;
+      border-radius: 2px 8px 8px 2px;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: #f8f5e6;
+      font-family: 'Cinzel', serif;
+      box-shadow: 5px 5px 20px rgba(0, 0, 0, 0.5);
+      transform-origin: left center;
+      transition: transform 1.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    }
+    .book-cover h3 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+    .book-cover p {
+      font-size: 1.2rem;
+      opacity: 0.8;
+    }
+    .book-spine {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      width: 15px;
+      background: linear-gradient(to right, #8b6b3d, #c2a878, #8b6b3d);
+      z-index: 11;
+    }
+    .page {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: #f8f5e6;
+      border: 1px solid #d4c9a8;
+      transform-origin: left center;
+      transition: transform 1.5s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+      box-shadow: 
+        5px 5px 20px rgba(0, 0, 0, 0.3),
+        inset 0 0 30px rgba(0, 0, 0, 0.1);
+      border-radius: 2px 8px 8px 2px;
+      padding: 30px;
+      color: #333;
+      z-index: 1;
+    }
+    .page::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      left: 0;
+      background: linear-gradient(90deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 5%);
+      pointer-events: none;
+    }
+    .page-content {
+      background: url('https://www.transparenttextures.com/patterns/old-paper.png');
+      height: 100%;
+      padding: 30px;
+      border-radius: 0 5px 5px 0;
+      overflow-y: auto;
+      font-family: 'Playfair Display', serif;
+    }
+    .page-1 {
+      z-index: 9;
+    }
+    .page-2 {
+      z-index: 8;
+    }
+    .page-3 {
+      z-index: 7;
+    }
+    .page-4 {
+      z-index: 6;
+    }
+    .page-5 {
+      z-index: 5;
+    }
+    
+    /* Cast Cards */
+    .cast-card {
+      transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+      transform-style: preserve-3d;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      background: linear-gradient(145deg, #f0f9ff, #dbeafe);
+      border-radius: 0.5rem;
+      overflow: hidden;
+      border: 1px solid rgba(34, 211, 238, 0.3);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    .cast-card:hover {
+      transform: translateY(-10px) scale(1.03);
+      box-shadow: 0 20px 40px rgba(0, 195, 255, 0.4);
+      border-color: rgba(34, 211, 238, 0.6);
+    }
+    .cast-image {
+      width: 200px;
+      height: 300px;
+      object-fit: cover;
+      flex-shrink: 0;
+      transition: all 0.5s ease;
+    }
+    .cast-card:hover .cast-image {
+      transform: scale(1.05);
+    }
+    .cast-content {
+      padding: 2rem;
+      flex-grow: 1;
+      color: #1e3a8a;
+    }
+    
+    /* Theater Seating */
+    .seat {
+      transition: all 0.3s ease;
+      cursor: pointer;
+      font-weight: bold;
+      position: relative;
+      overflow: hidden;
+    }
+    .seat:hover {
+      transform: scale(1.1);
+    }
+    .seat.selected {
+      background-color: #f59e0b !important;
+    }
+    .seat.booked {
+      background-color: #10b981 !important;
+      cursor: not-allowed;
+    }
+    .seat.occupied {
+      background-color: #ef4444 !important;
+      cursor: not-allowed;
+    }
+    .theater-screen {
+      background: linear-gradient(to bottom, #e0e0e0, #a0a0a0);
+      height: 40px;
+      width: 100%;
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #333;
+      font-weight: bold;
+      border-radius: 4px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+    .theater-stars {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      opacity: 0.3;
+    }
+    .premium-seat {
+      background: linear-gradient(135deg, #f59e0b, #f97316) !important;
+      color: white !important;
+    }
+    .vip-seat {
+      background: linear-gradient(135deg, #8b5cf6, #7c3aed) !important;
+      color: white !important;
+    }
+    
+    /* Film Journey Cards */
+    .film-journey-card {
+      background: linear-gradient(135deg, #f0f9ff, #dbeafe);
+      border: 1px solid rgba(34, 211, 238, 0.3);
+      transition: all 0.4s ease;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+    .film-journey-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px rgba(0, 195, 255, 0.3);
+      border-color: rgba(34, 211, 238, 0.6);
+    }
+    .film-journey-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, #22d3ee, #3b82f6);
+    }
+    .film-journey-image {
+      height: 200px;
+      width: 100%;
+      object-fit: cover;
+      transition: transform 0.5s ease;
+    }
+    .film-journey-card:hover .film-journey-image {
+      transform: scale(1.05);
+    }
+    
+    /* 3D Spaceship Model */
+    #spaceship-model {
+      position: relative;
+      height: 400px;
+      width: 100%;
+      margin: 2rem 0;
+      border-radius: 0.5rem;
+      overflow: hidden;
+      box-shadow: 0 15px 35px rgba(0, 195, 255, 0.3);
+    }
+    
+    /* 3D Ticket Model */
+    #ticket-model {
+      position: relative;
+      height: 300px;
+      width: 100%;
+      margin: 2rem 0;
+      border-radius: 0.5rem;
+      overflow: hidden;
+      box-shadow: 0 15px 35px rgba(0, 195, 255, 0.3);
+    }
+    
+    /* Floating Navigation */
+    .floating-nav {
+      position: fixed;
+      bottom: 30px;
+      right: 30px;
+      z-index: 100;
+    }
+    .nav-button {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #22d3ee, #3b82f6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .nav-button:hover {
+      transform: scale(1.1);
+    }
+    .nav-menu {
+      position: absolute;
+      bottom: 70px;
+      right: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+    .nav-menu.active {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: all;
+    }
+    .nav-item {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f0f9ff, #dbeafe);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      border: 1px solid rgba(34, 211, 238, 0.3);
+    }
+    .nav-item:hover {
+      transform: scale(1.1);
+      border-color: rgba(34, 211, 238, 0.6);
+    }
+    
+    /* Particle Effects */
+    .particles {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 999;
+    }
+    .particle {
+      position: absolute;
+      background: radial-gradient(circle, rgba(34, 211, 238, 0.8) 0%, rgba(34, 211, 238, 0) 70%);
+      border-radius: 50%;
+      pointer-events: none;
+      opacity: 0;
+    }
+    
+    /* Interactive Cursor Trail */
+    .cursor-trail {
+      position: fixed;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: rgba(34, 211, 238, 0.6);
+      pointer-events: none;
+      z-index: 9999;
+      mix-blend-mode: screen;
+      transform: translate(-50%, -50%);
+      transition: width 0.2s, height 0.2s;
+    }
+    
+    /* Parallax Elements */
+    .parallax-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .parallax-planet {
+      position: absolute;
+      border-radius: 50%;
+      box-shadow: inset 5px 5px 15px rgba(0,0,0,0.3);
+    }
+    
+    /* Interactive Elements */
+    .interactive-element {
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .interactive-element:hover {
+      transform: scale(1.1);
+      filter: brightness(1.2);
+    }
+    
+    /* Holographic Effect */
+    .holographic {
+      position: relative;
+      overflow: hidden;
+    }
+    .holographic::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(
+        45deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.1) 45%,
+        rgba(255, 255, 255, 0.5) 50%,
+        rgba(255, 255, 255, 0.1) 55%,
+        transparent 100%
+      );
+      transform: rotate(45deg);
+      animation: holographicShine 3s linear infinite;
+      pointer-events: none;
+    }
+    @keyframes holographicShine {
+      0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+      100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+    }
+    
+    /* Keyframes Animations */
+    @keyframes flyAcross {
+      0% { transform: translateX(-300px) scale(1); }
+      50% { transform: translateX(120vw) scale(1.3); }
+      100% { transform: translateX(-300px) scale(1); }
+    }
+    @keyframes cometFall {
+      0% { transform: translate(-100px, -100px) scale(0.5); opacity: 0; }
+      10% { opacity: 1; }
+      90% { opacity: 1; }
+      100% { transform: translate(100vw, 100vh) scale(1); opacity: 0; }
+    }
+    @keyframes glow {
+      0%, 100% { 
+        filter: drop-shadow(0 0 10px rgba(0, 150, 255, 0.7)); 
+        transform: scale(1);
+      }
+      50% { 
+        filter: drop-shadow(0 0 25px rgba(100, 255, 255, 0.9)); 
+        transform: scale(1.05);
+      }
+    }
+    @keyframes fadeInUp {
+      from { 
+        transform: translateY(30px); 
+        opacity: 0; 
+      }
+      to { 
+        transform: translateY(0); 
+        opacity: 1; 
+      }
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-15px); }
+    }
+    .floating {
+      animation: float 4s ease-in-out infinite;
+    }
+    
+    /* Nebula Effect */
+    .nebula {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(
+        ellipse at center,
+        rgba(59, 130, 246, 0.2) 0%,
+        rgba(34, 211, 238, 0.1) 50%,
+        rgba(0, 0, 0, 0) 70%
+      );
+      filter: blur(30px);
+      opacity: 0.5;
+      mix-blend-mode: screen;
+      pointer-events: none;
+    }
+    
+    /* Misc Styles */
+    .page-number {
+      position: absolute;
+      bottom: 10px;
+      right: 20px;
+      font-size: 0.8rem;
+      color: #666;
+      font-style: italic;
+    }
+    .book-tickets-btn {
+      background: linear-gradient(135deg, #f59e0b, #f97316);
+      color: white;
+      font-weight: bold;
+    }
+    .book-tickets-btn:hover {
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      transform: scale(1.05);
+    }
+    
+    /* Loading Screen */
+    .loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #e0f2fe, #dbeafe);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      transition: opacity 1s ease;
+    }
+    .loading-content {
+      text-align: center;
+    }
+    .loading-spinner {
+      width: 100px;
+      height: 100px;
+      border: 5px solid transparent;
+      border-top-color: #22d3ee;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Enhanced Section Backgrounds */
+    .bg-gradient-light {
+      background: linear-gradient(135deg, #f0f9ff, #dbeafe);
+    }
+    .bg-gradient-medium {
+      background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    }
+    .bg-gradient-dark {
+      background: linear-gradient(135deg, #bfdbfe, #93c5fd);
+    }
+    
+    /* Interactive Hover Effects */
+    .hover-glow {
+      transition: all 0.3s ease;
+    }
+    .hover-glow:hover {
+      box-shadow: 0 0 20px rgba(34, 211, 238, 0.7);
+    }
+    
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+      .cast-card {
+        flex-direction: column;
+      }
+      .cast-image {
+        width: 100%;
+        height: 250px;
+      }
+    }
+  </style>
+</head>
+<body class="text-gray-800">
+  <!-- Loading Screen -->
+  <div class="loading-screen" id="loading-screen">
+    <div class="loading-content">
+      <div class="loading-spinner"></div>
+      <h2 class="text-2xl mt-4 text-cyan-600">Preparing Your Cosmic Journey...</h2>
+    </div>
+  </div>
+
+  <!-- Cursor Trail -->
+  <div class="cursor-trail" id="cursor-trail"></div>
+  
+  <!-- Particle Effects -->
+  <div class="particles" id="particles"></div>
+  
+  <!-- Floating Navigation -->
+  <div class="floating-nav">
+    <div class="nav-button" id="nav-toggle">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+    </div>
+    <div class="nav-menu" id="nav-menu">
+      <div class="nav-item" onclick="scrollToSection('hero')">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-cyan-600"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+      </div>
+      <div class="nav-item" onclick="scrollToSection('tickets')">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-cyan-600"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path><path d="M13 5v2"></path><path d="M13 17v2"></path><path d="M13 11v2"></path></svg>
+      </div>
+      <div class="nav-item" onclick="scrollToSection('film-journey')">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-cyan-600"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M7 3v18"></path><path d="M3 7h18"></path><path d="M3 11h18"></path><path d="M3 15h18"></path><path d="M3 19h18"></path><path d="M17 3v18"></path></svg>
+      </div>
+      <div class="nav-item" onclick="scrollToSection('cast')">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-cyan-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+      </div>
+      <div class="nav-item" onclick="scrollToSection('legacy')">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-cyan-600"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1-2.5-2.5Z"></path><path d="M8 7h6"></path><path d="M8 11h8"></path><path d="M8 15h6"></path></svg>
+      </div>
+    </div>
+  </div>
+
+  <!-- Hero Section with 3D Space Scene -->
+  <section id="hero" class="hero h-screen flex flex-col justify-center items-center text-center px-4 sm:px-8 relative">
+    <div id="space-scene"></div>
+    <div class="stars" id="stars"></div>
+    <div class="nebula"></div>
+    <div class="comet" id="comet"></div>
+    <div class="spaceship"></div>
+    <div id="interactive-spaceship"></div>
+    
+    <!-- Parallax Layers -->
+    <div class="parallax-layer" data-depth="0.2" id="parallax-stars"></div>
+    <div class="parallax-layer" data-depth="0.4" id="parallax-planets"></div>
+    <div class="parallax-layer" data-depth="0.6" id="parallax-asteroids"></div>
+    
+    <img style="border-radius: 50%;" src="data:image/jpeg;base64,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" alt="Odyssey Logo" class="w-32 md:w-48 animate-logo mb-4 z-10 floating interactive-element" id="logo">
+    <h1 id="hero-title" class="text-5xl md:text-7xl font-extrabold font-['Exo 2'] text-blue-700 holographic">The Odyssey</h1>
+    <p id="hero-subtitle" class="text-xl md:text-2xl mt-4 z-10 text-blue-900">A Mythic Epic by Christopher Nolan</p>
+    <div class="flex flex-wrap justify-center gap-4 mt-8 z-10">
+      <button onclick="scrollToSection('tickets')" class="px-8 py-4 bg-cyan-500 text-white rounded-full font-semibold hover:bg-cyan-600 transition duration-300 transform hover:scale-105 shadow-lg shadow-cyan-500/30">Buy Tickets Now</button>
+      <button onclick="playTrailer()" class="px-8 py-4 bg-purple-500 text-white rounded-full font-semibold hover:bg-purple-600 transition duration-300 transform hover:scale-105 shadow-lg shadow-purple-500/30 flex items-center">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        Watch Trailer
+      </button>
+    </div>
+    
+    <!-- Interactive Floating Elements -->
+    <div class="absolute top-1/4 left-1/4 w-16 h-16 interactive-element" id="floating-planet-1">
+      <img src="https://www.pngall.com/wp-content/uploads/13/Planet-PNG-Image-HD.png" alt="Planet" class="w-full h-full">
+    </div>
+    <div class="absolute bottom-1/4 right-1/4 w-24 h-24 interactive-element" id="floating-planet-2">
+        
+      <img style="transform: scale(1.6); border-radius: 55%; ; " src="https://p7.hiclipart.com/preview/75/937/248/5bbd7d23d1757.jpg" alt="Planet" class="w-full h-full">
+    </div>
+  </section>
+
+  <!-- 3D Spaceship Model Section -->
+  <section class="py-16 px-4 sm:px-8 bg-gradient-medium">
+    <div class="max-w-6xl mx-auto">
+      <h2 class="text-4xl md:text-5xl font-bold text-center mb-12 font-['Exo 2'] text-blue-700">Explore The Odyssey Ship</h2>
+      <p class="text-center text-xl mb-8 text-blue-900">Rotate, zoom, and explore the spacecraft from the film</p>
+      <div id="spaceship-model" class="hover-glow"></div>
+      <div class="text-center mt-8">
+        <button id="rotate-model" class="px-6 py-3 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 font-bold transform hover:scale-105 transition mx-2">Auto Rotate</button>
+        <button id="reset-model" class="px-6 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 font-bold transform hover:scale-105 transition mx-2">Reset View</button>
+        <button id="toggle-lights" class="px-6 py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600 font-bold transform hover:scale-105 transition mx-2">Toggle Lights</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Ticket Purchase Section -->
+  <section id="tickets" class="py-16 px-4 sm:px-8 bg-gradient-light">
+    <div class="max-w-6xl mx-auto">
+      <h2 class="text-4xl md:text-5xl font-bold text-center mb-12 font-['Exo 2'] text-blue-700">Secure Your Tickets</h2>
+      <div class="flex flex-col md:flex-row justify-center items-stretch gap-8 animate-card">
+        <!-- IMAX Card -->
+        <div class="flip-card w-full md:w-1/2 hover-glow">
+          <div class="flip-card-inner" id="imax-card">
+            <div class="flip-card-front p-8">
+              <h3 class="text-2xl md:text-3xl font-semibold mb-6 text-blue-700">IMAX Experience</h3>
+              <p class="text-base md:text-lg mb-6 text-blue-900">Experience Nolan's epic in stunning IMAX. Prices start at $25.</p>
+              <div class="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label class="block text-sm text-gray-600 mb-1">Date</label>
+                  <select class="w-full px-4 py-2 bg-white text-gray-800 rounded-lg border border-gray-300">
+                    <option>Today</option>
+                    <option>Tomorrow</option>
+                    <option>July 18</option>
+                    <option>July 19</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm text-gray-600 mb-1">Time</label>
+                  <select class="w-full px-4 py-2 bg-white text-gray-800 rounded-lg border border-gray-300">
+                    <option>10:00 AM</option>
+                    <option>1:30 PM</option>
+                    <option>5:00 PM</option>
+                    <option>8:30 PM</option>
+                  </select>
+                </div>
+              </div>
+              <button class="mt-4 px-6 py-3 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 w-full font-bold transform hover:scale-105 transition shadow-md" onclick="toggleFlip('imax-card')">View Seating</button>
+            </div>
+            <div class="flip-card-back p-8 relative">
+              <div class="theater-stars" id="imax-stars"></div>
+              <h3 class="text-2xl md:text-3xl font-semibold mb-6 text-blue-700">IMAX Theater Seating</h3>
+              <div class="theater-screen">IMAX SCREEN</div>
+              <div class="grid grid-cols-12 gap-1 text-center text-xs mb-6" id="imax-seats">
+                <!-- IMAX seats will be generated by JavaScript -->
+              </div>
+              <div class="flex gap-4">
+                <button class="flex-1 px-6 py-3 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 font-bold transform hover:scale-105 transition" onclick="toggleFlip('imax-card')">Back</button>
+                <button class="flex-1 px-6 py-3 book-tickets-btn rounded-lg hover:bg-amber-700 font-bold transform hover:scale-105 transition" onclick="bookTickets('imax')">Book Tickets</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Standard Screening Card -->
+        <div class="flip-card w-full md:w-1/2 hover-glow">
+          <div class="flip-card-inner" id="standard-card">
+            <div class="flip-card-front p-8">
+              <h3 class="text-2xl md:text-3xl font-semibold mb-6 text-blue-700">Standard Screening</h3>
+              <p class="text-base md:text-lg mb-6 text-blue-900">Enjoy the mythic journey in theaters. Prices start at $15.</p>
+              <div class="grid grid-cols-2 gap-4 mb-6">
+                <div>
+                  <label class="block text-sm text-gray-600 mb-1">Date</label>
+                  <select class="w-full px-4 py-2 bg-white text-gray-800 rounded-lg border border-gray-300">
+                    <option>Today</option>
+                    <option>Tomorrow</option>
+                    <option>July 18</option>
+                    <option>July 19</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm text-gray-600 mb-1">Time</label>
+                  <select class="w-full px-4 py-2 bg-white text-gray-800 rounded-lg border border-gray-300">
+                    <option>10:30 AM</option>
+                    <option>2:00 PM</option>
+                    <option>5:30 PM</option>
+                    <option>9:00 PM</option>
+                  </select>
+                </div>
+              </div>
+              <button class="mt-4 px-6 py-3 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 w-full font-bold transform hover:scale-105 transition shadow-md" onclick="toggleFlip('standard-card')">View Seating</button>
+            </div>
+            <div class="flip-card-back p-8 relative">
+              <div class="theater-stars" id="standard-stars"></div>
+              <h3 class="text-2xl md:text-3xl font-semibold mb-6 text-blue-700">Standard Theater Seating</h3>
+              <div class="theater-screen">SCREEN</div>
+              <div class="grid grid-cols-12 gap-1 text-center text-xs mb-6" id="standard-seats">
+                <!-- Standard seats will be generated by JavaScript -->
+              </div>
+              <div class="flex gap-4">
+                <button class="flex-1 px-6 py-3 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600 font-bold transform hover:scale-105 transition" onclick="toggleFlip('standard-card')">Back</button>
+                <button class="flex-1 px-6 py-3 book-tickets-btn rounded-lg hover:bg-amber-700 font-bold transform hover:scale-105 transition" onclick="bookTickets('standard')">Book Tickets</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 3D Ticket Model -->
+      <div class="mt-16">
+        <h3 class="text-3xl font-bold text-center mb-8 font-['Exo 2'] text-blue-700">Your 3D Ticket</h3>
+        <div id="ticket-model" class="hover-glow"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Film Journey Section -->
+  <section id="film-journey" class="py-16 px-4 sm:px-8 bg-gradient-medium">
+    <div class="max-w-6xl mx-auto">
+      <h2 class="text-4xl md:text-5xl font-bold text-center mb-12 font-['Exo 2'] text-blue-700">The Cinematic Journey</h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 animate-card">
+        <!-- Production Begins -->
+        <div class="film-journey-card rounded-xl shadow-lg overflow-hidden opacity-0 hover-glow" id="production">
+          <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBxMTEhUTExMWFRUXGB0aGBgXFxoYFxcYHRoYHR0ZGx0aHSggGBolGxoWITEhJSkrLi4uFx8zODMtNygtLisBCgoKDg0OGxAQGy0lICYtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLf/AABEIAJMBWAMBIgACEQEDEQH/xAAcAAACAgMBAQAAAAAAAAAAAAAEBQMGAAIHAQj/xABJEAACAQIEAwYDBQYCBwYHAAABAhEAAwQSITEFQVEGEyJhcYEykaEHI7HB8BRCUoLR4WJyM0NjdKKy8RU0U3OzwhYkJTVEVIP/xAAZAQADAQEBAAAAAAAAAAAAAAABAgMABAX/xAAkEQACAgICAgIDAQEAAAAAAAAAAQIRAyESMUFRMmEEE4EiI//aAAwDAQACEQMRAD8ASG4DVcxvxGrRetjaq1i11NcUZJ9HU4tC51ohrQIFR3BUqfDQnY0SBcMZpjh7cR0oEYjLNSYXifiAiaNSYukZxdJOgpPibZEGrHfv940xFacR4cCkjcVSLomyt2wTTrg95kZfHlEE76ExGtD4HCKfjaDrCrBZo8zovvXt64dctpUHVjJ+v5U+2xlSR7jO6AaHL3DzAhR+Z6UP+13EUISVHmN5qTh95s4PchxMGF0+ewpzx3DqyqDlUrzA0HlvBPpp50y0JdgShDZk/HIEyRGmxB39dN6YY3CWLdlZJZiJJU6yRO3lSW2wLSdEXUnr/eh34gdd5Mx5D/pSVbHukWFEGT0APsf19KgwNk3Lik7SfoaDOMa3lOpBQK3y2pr2ZQ/E2kSSOkmajkuMWUjTkgrG2xmYkMZMEDnB1J3Mnr50vIFWW/xMNaT9nK943xLALepG+9VbHrfRs11CFJ3AgfryoYXKtmy02e5Ky0kmKPw/CWdc1tgw6TBHqKFvYV0+IR+dWtM52iTB2Vzfu6bZpgGmBd3Vlcs2U+EwBO7OQpy+QG3KlC3ioMxGX3Gs/P8ArUZxzSAZy8gdsvPQmNRPvWq9MhJBN3FKqz94xQwFlduZPxRqBGhiR7AX+KaLbtnfQOxBZZBGVSoAWJqLiVlywUqFfYbAamddoiefXeok4M5WQRDbksFUHSQGOhiVk8pox0hNA3eD4kB8xMjzj+vnTuzxAFHGmwywiiGJzLoNySGEfFBnWIoPEcI7uMrqAROjA6jkMpkny38q3u4kSti0fhYNcuEAAsgYAD/CuZ/80+lFxs1WCm7Hic5XMEg9CFKn3B+QHXTS2wQwAdem5plh74Cn7tVzE5XIGbTRiB7jf+DShsakPCMcnIg9OYPSeVBMIQDlb/FbgkbDeCsTBPiH16UGod7pVUymdFUGZ6ADUnTaib9+UOYKRsWzEn6HkBG3P5dM+zfs2LaHGXQTedYSY8CARtyYjc+3WnSsZFN4bwTHlQRgrrgNOW4pRSepDlS09NaE7QdkuIuwY4VjkEZUKHKABoFUzyrtxxJN0D91BJ82O3rQF++2aRqDMnn8uc1RwSDFnDMHhLjZlKG2qEhgykOGgcjqNDOsV0jsH2fw5l2spcYBY70d4AddgQFnzinPHlsXEy3/AIjoCnxjfadtORpbh8V+zqe4YrIH+kVWGk7wQRvUJ2notGNrosXEsIrAqbFghvim3uNoMHWqjxrshhCwUYeC8kBMQ6GQQDClWXQEfKjcFx7F3RKJauQ0ECQV9Rmr3iHEsUmV7mFByzBD9YnSD0qfNo1IrHaDsGlqxdvrcuZba5ij5SSJjRliNP8ACapfEQO4Eajw6/Kugdou2QvYS7h/2e4j3UIBJGUQRM89j0rnmJX7lQZAhf3fP1qsHe2K0a9n8d3b+R3np19RTjEYZTibV1RoXAaPLn+vKkF7CqgBzEknpA6/0plwjEtOX5agH+tNZlsuou5src4iq5wYjLiR/wCb+AqHiPE7lu3o3SCAOoBBkdJoTs9cBN6Sc/cueUEHL7gz+NZLYW9Da2mk9f1/SsrRScoE17WFLPiLBEg6Gqti11NdIuYV8WWuIoHI1ROK4c27jow1Bg1wY3TpnbLasTONKjvEiKlv1rixotWvaErTF92tsCfvFry4BWuGPjHrVfBLyP715FNDY/HOR4GGXmNjRfDML32JCFQREnSdB+FVnHGHb1P40uNWhpKthWGcTmnXmalTFq4YMpP5eflQCA5ABux/tUuEQ5+7B3ME+XOqcED9jGlvFMLQKXAoQAZTuZBlhA20HzpcDcuyQrPG8DQdJ/XI0ViLK58q7HSOkj8KbYtiiW7VrwKB4tpY82c8z+FC0jcbK1dJByuI8hy/vWJk8MDKeZkkeUTtTLg11GNxHEhtQdJn5T00ofiPDgh0YGaN+DfZtisWLgW0g0mSec/omm93FJbtd2rDMw1Max/faq5hVIbSj8PhyWk89+dQnCK14RaLbCcJxAWznAMjnuAfPmPUVccL2lF1ArKH0gnr6iqVicMLd3KdUcbfiPY0TgcM9p89lvEuuU7MPz9KFx7sEk/QbffLfAEhJ0jQgxtPStOI4gnZpHnv9KuuDt4XHIHgWriRnUaehHUUDxjhVlR4WGgplpk27VFHdzGYmfKfXf6VNhsWTCzlHhltIifDIG5k8+VaYnBSSAR7z/Stl4FceAjpAJ3J25bL61ejnkgTGcVzFgQAusKogBo0I6a6keZI6ULw7Hv3kMS+YsddYZhBIXb2p5/8EXyB47I5E52036qP1NS4TsLiUJP3DxBB7xtII8U5Rr70eJOkVJ7wzDko2Xp/fSaccJwwOaTbQcwx8ZI3AVd9YG438qY43sLjS+ZUtvyMXLYBPOAWHryryz2SxyrpY5bK9rU9Zz6mjToxFevwSMgHhEqR4jESp2C66yByA11lSts5jGWdwC0/OmJ7NY9Tm/ZrhP8AKR6aEiIrfAdlL7sENm+jkkAsmVBOzFjuAZkdAIoUzDjsV2dF+6Hvk90hGg17y5vljmo0JPp1iu0vZyqoHkPmf70k7O8IWyqATlRYE7xzY+ZOv/Wm924CjOTooLeYAB+scqqlSoKFOFxJIu3CZGdvTTQAek/M1We0/aUYYKBqxIJE65ddfmKZ/wDagez92ndpJAWZJ13Pmd/61Q+0uHz4hWIzLkynyiSD+VHL2w4ldDluM57WbIQT+9uwPNh58/OkuKuaCWOu0FspHVSdVP8Ah8Q15VCcUIy8gIigLd0gxlzAn4W1X18j5iuU75RpaH3YvjBw2LGczavQjGNjPhbToTB8mPlXTO0xAw7mPh1rkeLuoyhbaFWLBW/hMg7aSYMbnnXXMHgVvYO3YuO2bKuZplp31zb9PSi8TnFpHNl/z2cg48cz22HINtsfg/pS+5bzg6ld5Ppyiui9oPs3ukZrF1bkD4HGRj6GYJ5ax61QOK4G5ZLJdRkcA+EiCd9uo8xNTUZQpMeMYyh9i3iGCtoikqWksBDESR/ahWQB0ySJ85iPxrfG8QN0ZO5YBSTOY/vRM6baUv74g6jRTtJ99d6vRGIfjPFHSR7TRPAEHeXY0iw3vqtLrr5kH+b8tqa9mlE3j/sD/wAyUyC+gxjCL1rKivHwDrWUAHY/su1wzk6+M/gKpP2gWsuMu6RMH10GtMPs67Tiyj2miCcwkxyqTtNcs4pi7MA4ECDsBXHGD4r+nTKaU2c8vmnnafhHdJafIVRhr5mJjypNi7YViAZg02432mu4u1bssqjKRqN2MR7Us4y5xa/o6kuLRUXuSSYA12HKsw90qdI16gH8ahxWjtBmCdRsa2UdK7GjnvY2Xi961nFtgM4hiFEkdJ5UjutNM3w7aN5c6X3LcGDWhSDJ2Er4QDtCwPU/2ozh2Hyr3h3IJA8v70Fj9wopljbsIQNl8I9AAPzNGXoERYuI8ZYzqZ95ptYxpvXFQLlkjMZmQOW2lI7SS6inHALiLeLOYAmknFdjRb6NuNYLuruZdjrQ9zEZhTTjfF0u+FEPrpSQWW5iBS37HSCMLa1BinmA4fmOoP0rXh2BkL/i286s+Fsd1bz5S0chXBlytukdkcaSEPaLhRNnOBrb1/l5/kfagOCXc4j95fqKtdziSMCpVlnQyNIPnVEwFxrbgruCR5GNCD7U2BOUHF+OieR8ZKRLaxLKGysRJ3HTWvGusf3ifepsXkCfdiJMnr5D03rzh1gsc2yrqx5V3QdqzkmqYxHDxbtpmZSz6lTqQBWmFwxh2UsOmu2n9a04RLPmuGFMwT6GPrTPDP8AuA7asaTlthcdIjwuHugK7ljBgSTExuddOWvlRCcRhxmUHcxlGmm87/M6xRN/iOZQiqDBiegFZgx3he2oVQynUydBAJGwJmNKVSl5JtI2vtdU51uAEagMMzHVoAO85QaGftDeBYBo12jmSfrH470fxHDZbpYmQUzZZ3Mbn9eVVuDbuSAGJg+IkwdY9RB+laOSXsDig232sxajl02MH661YOBds7OVzicQilWVWBBGpB2ABnXc8oO1UuyuaTI3zayYAEZfXTbzp9hOw2Fv2LrtmF85iCpJAI10XQEmIM9TXRjm5SEcUi4cR4xcawf2aWdjCshzADr0/XzY9ncW9yzlv5WYEh4AjlvpoYPpFfPvdtYIuLdIuLEATIJWSNeW3zHs0xPb3HNZNjvFUH4mCqGIIiOg06CavYtHa7+JwUi0HRXYkhF0OnxQB9apHafA5WPdksG2A1b003rnfBsA91kfNlHeBS4fxBiRrAlz8QOg1gxrt23DYOwQExBDmIOf7sNudmYM3qdDAoSarY8ccvBxzjHBxZth5cXSZIYQ0Hbznnv7c6Lwl4hUZt4E+tdJ7WdhkxC57N1kIMhCA6AQZCAQV5aSRppvSbD/AGcpkOfEXC0SAqBBtzzTp50jXLorF8PkV7BuWvW8jCCRM+st6aCuhcI4obt8W0JCxJPvqfKYj3rnowFvC4jxXQFgjxkbnbUQNRPKm/CuNi29wqwhoIZdZA0Cg7QSD8668EeMWmc35GTnJV0dgGIgUFxPC2MUht3kDrynRlJG6sNVPmP7Uo4NjmZZuGCToI5Efj51vi7jK0zBEx/iU7g/j6j3J/UnokptHNO2fZC5hLneIxuYZhAY6lCf3X+gDbHyOlUa5bGu8k6z011FfR1m4txWV1BRhlZG1BBEEHrJqi8R7JLhXYgF0YGGIk5ZkLP8Q59dD6c88XHotCVqjlwtRaH/AJn/ALRTLgB8OII52vxZNK0xSeFtP/yLm3oPpW3Z++ii6ruFLLAmTzB2EnlU0ODXbjLGbczpvsayp+K2cxVke24UEkBhIBAOxgnTpXtCgG9u70MVq99up+dQh6wNUEjobJltk0QMUVtlFAWfiYfER0nkPIVCuJNYiZpJbKo3O59AOZrGQI2HU+VD23KkiiFatmwbNDAb1RemKzQliNW0qMW9R61uqxoaktp4hHL8aF06DSqyC5q6+oHrrTPj6BPAOUTyk7n60/t8PTDpbVgrXGIdzzB3CDoBpr61UuIYjO2bqTQhkU3rwNPG4JX5JeCWM2Ig8lJ+QoW7uY6mp+D4nLePmGH0/tWltZb3pn2LHYK09da9S+3U00xOFnpQqYXWK3JMbg0x52W4ge/QOSRTTtPxx0YJbYqDzAmhF4KbKW7uhGbejMXg1dleJ6V5+VRjkTa0dkE5Q09nvCeN3ltkORcQqxIMZlCjrsZ6b6Uj4Kodbmb1HkZ3FXXEIDZMgABTyA5VReCXIVvP60ccuSk0q6J5FTSZJeCjRtCRuOlZhAArDvGYb5AIB9TW+JvyJXpBoXG4v4QgyKogdSTuSec11xba+znaSGGILEBvg5axAEcq2/aAVFtNObMd2P5DoKTftEgAxpUqXdd6yh7FlNeC2cJI0WQRr0A2A9+dWTgdnTSIB00ggx+HrVS4JaJgn9eVXTgyBc4BABWJnUmOlaSJhPH8HBF3osTPIwI16k/T5UXjLKTnGgECRE6aHX5cq6Xxq4DbZc0EjrBHQ+k1zTHYdzcckFvFoBtA8Oo5a661BqpDeBPh7wnyCydT/ECee+1S4H7SLlrDtZWz4iSRcLzE+RXxEetBXZRbhIIOQmOUkaT89qqdwV1YkuyTDkxwLTcXMPKAx1nU8x/00rXid9LjAquQAa6efl5UC4jSjcEil1Dglf3o3jyq5jLVtysIGYA5tN/XTX5U8s9t8UpC3VS4o/de2s/hWmI4Xl+A6I3PViATB8jlg+RBrziPA2uk3Q6iQNCDyUDf2oPfYym10dC7LdsLTAHNlH8ETlPMA7x5Grnew5eLtloO+WdG/oa+d04beUB0IIOxVtx7xV+7IcfvWUXvJk7ayGAJHsdDSbjtFlJZNMm+1HgpNkYpVy92ct0dcxAVvUHT+YdKrHCnylCFzFVEA7TE6+Qn8K64mNsYyy9q+B3dwQROU8ufXMNPSqqvZFsLce7m7yxoUYznAiBnVQdjAkDnJA1jsxRemziyNbSIuDcZv22zXbZZGOpgkCrXxi8CqXFM27g3/hMaN5QRr6+tJbOLxKJmbu1sN/rLahxbPJnDCcvU8t6lXFNbFy3inDJo2bRQNYMAQIgnbpXR5Ij/AILeLqo3bmfPm0+ZmKZ8Rw63bbWmMFz4TzUgHxenKqEnaS5e+5wS5LexvEQTHQHbTaaa8NFqxriLoDGcoZjcuEHcwskSaWUVIKlRzTieCe07W7gyuMRckfygyOoIIIPQilli5dY5W0jy1A8q6v23wCYq0uIS3cD2hqzKFDoSNYmRGhE8ifKuSYy+VeP3QT7ExOvMVwZIuLo7MbTLbYuI9o2hgWbJbbxGEO2oGk5tZ+XlWVXMVx0tZKZzK/DqwOvoducHpWUkUVnJIF2rxmrLrVEXpEgMJs60yThd0AkowWN6UI8U64VxJphyzdJOkAMfqQo+dCWtjwSboSW5V8poxMSyAgHTeKlxtvvBnHxLvQdpg/kedZSvZpQrQXhbCXVLFwp5g860uXFtuoRszBgxMaaaj12qF7aggAadeZra1aKzlaJEGddOk0XOPkHCXgd37gPeXn1uMNBOgZufoBy61VbpgxVnwItdy3ev45hEA56an+sxSXiuHysB5RS4fI2Vt0LVaGmjbLeKaCKQaMtrVZEodjC7c0ofDP8AeKYLQduvlXt3ap8FilTlJqRexwnFL2IbuQpVJkqB+opyz6qgUgDQzBM6cxypFw29ce5mQRsTALaLryq18LK3CTIJG8V5/wCRfL6OzFqIJ2iv93hW6kR8/wC01z/DXyFMfOrX9ol/REHUn8vzqrYRJtvXV+NGsdvyzkzyudBDYssoAABEyQNW9ais3pOVqGSpw4O4966eKRz8rCVtKDE1Pbw67zFC3BJBHSp7CVkgPsecNDAgq3sdj8tquPBsOxYM1zTTwgADTz3qn4BCsTzE1ceDXNq1JgdosV63MGJI5xrQWOwIeWWQzEAyJEaew23FNMIZHWilT8ai4Wayi9puB3b9i6lrD21YiFMiW16lRl06mK5vd+z7iP8A+q3s9s/g1fQrivQlPC46QHs+Wb+CcGCrA7bdNOVG8GwtxrgCLyMlpCgRBk8tNPeujcZ7IXGxV2zba2ZHernJSVd3GUQDJUr9RVQ/7UxWGBAwr2gNyyNp56iKspWK0OsWlq1aYxcN5hAzDKrZp8SgEgqJP0qG9a8JQjQiD6RFV61xsM5uXcxbmc0ljIOx329qVW8beG11vmfwNMYs11ktWwqqzAGIXxEbnWmfDeHYq7hb91ot4a3be4mZT3jFQDCifCuaZYjTX2o4tXXeEBdjrCwzExJ8I168q+h+yvDTawtixcHiFmLgPViCw89SRSydBRyHD8VYZQGLRq7RKx/CAf3Sdz5CrngO08WlO+QkMs7qZgj+Uj3WneM7AYQgdyvcMq5QV8SsOjhj4/WQfOuZ8XwVzCXYkFCSoI+Fo3Guojpyrox510RlDyXRuLqHuKQO6dwCwBkK6kEEfvAGfYg9ZrHaTErd7uw19LYtqA2bNDGBHwg7AbedLLvGgtszvplHUifpr9KU4DCC+5Z3eSZYhJEnckz+VXeS9Inx8sf2rmHVcpxNxxyS0uVT/M5n/hqx9nuMYayIGFbMeebOx8z4AflSnheHwdoqBfUuxAUC27sWJgAADUzyq4WMRbtEBsyEne5ZuovvoY94p19iUOMLx1LikNYuwRBBWdDv0MRXEu1HChhb7JJa05JRyNxvr0YSJG867EV2n9uRBmuXrWT+JcxA9SFP1iqN9pT4e4lt7JVxmhipB1hoJA+E/FvvpU8sE0VxyaZzzGcOZAOZK5tNfDyPpvWVLftNIImFEKQZyxrEfw6n51lclUXbtjnjOHVdhrzpbYwTNqBpVk4mpuBoA8q87NNlJzDTzrniyrKuEhoqz4XBobZMeLKx/wCEx9an4/3GWVWG6il/A+Jqlws7QAJGk68qEtjY3tGYXBNats14ZS5AUHQwBJMe4+RpFi7WRiVOn4Uw4xxU4i5JnKNF/M+pNDtYcDaR1FCKp37Hm1LrwRd/mAnej7VmRS23bM6rTPD3Mo0WD8604J9M0JtdhdvCBB3jbD4RzJoO7az3gPnU2Hs3LtzMxkIMx10EbD5xU/D7cG5cM/wr6n84mm+MdAvlLYm4xhstyPIH5ia0sUfxsA3THkPkIoRLdUSuKJt1JkxtzFSdyoHwgnzE1raYimFm4Y0Qn01qbVFYuzXh/A+8Myo8hV64HwG3hxmGrEdaScBwIBzPpNSdqOOZPuLRgkeJug6D161wzcskuKZ1f5hGytdssULt4lTKr4Qesbn50rwVyAV60TfsypoRE0kcq7sSXDiceRvlZGV1o3C4WRUdtBILajmNtKYPj/DkRQo2nc08r6Qka8glqASNxTHheFz3Vt9WAnyJ3+VBYbCO3wqTFMuHNlZW6UJdOgx7Vh+IxGa68aLMKOijQD5VZODPtVYxFuHMbHUU94RcoR+KFn8nZd8A+1MlE70j4dc2p5aaRpSgPTvXjAEEcjvW+TWvclEByH7TeBYSypIz96VTus927cPxt3h8bHTKF8tR1rmi2RrrGnQ66jTbpNd47e8Lwlwo+MkIlq4QUYq2YNahV5MWBOhnauMcSZGebdsW1gDKpJGgAmTuTGp5mTzqsHoAAuEJE6Rz8tv6itTZIjY0WCcuXznzqSzhc0SwHmZgfKnAWb7MBeF49z+yM86JfOW6fC0m0wRmWBMxpB1rtWELErnAV8niCtmAMiQCQJHnArjP2acOR8cpNzI9qXVMv+kAUggMDodQSNZEx5dlv4lLRL3HVFC6ljA3HWoz7Cghudct+0ThltcKrhl7xLp0kZnDfEQOfig+k0d2m+0Q6pg1k7d6w0/lB/P5Vza7Zd2LXHLMfikkz5600MbuzNiwIWPT1pgOGMV+Mk+eq/I6Vj4eBWtvHlRBkj2OnrXQlXYpFaBs3FuallYEFgCAQQR6e1Me0fFMTjnz4q8XI1FsSLaD/CBoPXeg3xnL9H+9B3LxnUmOR5itSMHcPY2zNm7dtN/hePw0Ir3iGNutIuvnzR4sqgmDzIAJPqTQS3415/Q/0r3EvmUevrpFFvQKNLjKJZfFAE5srAddBoRPWDWVBeXQyIMwYgnTz1rKmwot2HHUmt7t4chQTYkAav7ChbmNUbLPrXGkzoYVj8Rnt+YpD3lTviTrymgjVYxEbCLZ1p1gsRABnUa0hRqsHCsIMpe7KpGh5n2oZNbHhvRJbxlkmWEH/Dp9KmtX0OqJzgF5I2JLdDAFK/2i3b/0Yk9T+XSiLLvc3BPQRRl1Zo90P71i2Uzo33empiehB8/LzpVdxAJAWci7TzPMmsw2Qoy3Ll5QG+FLVt12GpLXFM76R011qfA8OttaNxr1xV710WLVskhQhlpuAAnMNBO29CGL2zTyehUwLGedShCSZ3NNbOHwwKw91gJzFkRJ6ZQrN71F3A7qzcmWuKzHbQi46aR5KKsRAhZqw8ByoJOmlJ74hGI3AJ+lF8Rs93Cgkzbttr1a2rn2k1LJj5qisJ8XZK+Mz3Wut8KDQfh70lxjF2Lncn6U0TAILVl7l+6DcQXMqWbbASSIlrizt0qK5bw4JLXcQxgwO4tKJjSSLxgTE6Vo4lF6NLJYtt3hMERUTWcp8j+FbunOvbR5cqZQp2gOd6Zoqe9WLs9gbDAtd01gAneN/wAqX8Mwz3XKWkUkDMzOctu2v8TnkPqaNtYTDg5f2i/cYSZthLNuRr4c4ZjtuYoTi2vQYSSfs94xjV8VtFAXypdY032rMTaAJKM7dVuBZ9nWNfVfetsM4YSPryPQ+dGEFFULObk7GmcFQNz1jYdKZcNpHh7L3LmQXMgFtrhOTN8JXSJHXrXoxTWmAciCdHXMF9GB1X6jzoqNCt2dI4WR0qx4euVDjuIssrr95bAhkjxf5geZHQ1bb3bK2LNs4cd/evD7q0p1J5lv4FXmTtFK4sxbsvKsUb/rlVeHE7uDwLX8a4uuoLHIoUFmPhtqOYBIUE6mpOzBxrZruLdAHAy2UWBZ30z7u0ETy00ocTCz7UuGm7g8wIm04eOogqQPMBp/lNcY7muvdtM+NxCYGxC91F27cOoSQVVQo+JjJPKqvxzssbDEG4kZgPGcrQVBzQARlJzAQf3SOVPHSAylCzW+Xl5U8wvDUZbr3LpVUuKg7u2lySyFplnXTQ0Rw3gtnEXVtW714u0xNi0BoCTr33QU4Bd2Qu9ziRf1+5VngbucuQJqNiXAPOJPKpeI8Uv4u4XvMYmAuwHkByFMsV2IxPeXxZQkWSsZxDXAwnwmMjkazB08zVbW9lBBGWNwdwayqzBWQAUPdugeXnR2OwfcWQ2IZheuQbdkAZlTm90/uTyXf6whxADnwtr0P6/CqcgUbvjOXP5T/elty7BNeXLTSRBJ8hP0qVOH3H3gebb6BTB9mB186RyCogr3q0a5Rd/hTqQDzAOmu/L1o272ZdWtqzgZxI0Om2n1FK5oKi30KEu1M0kjy57AeZNaXMPkZl5qxHyMVtcBO+v0pkKzFYwQAPPn9RWU54cLKWnbKrOAJzCYBIGn4VlJy+iv667YMHrV68c61hqdBIXqI1K4pjwjAgg3H+EbU3SFYtwrgOpIkA7df7UfjcZcu6sdOQGwoe/bVzFsHMTEVb7HDLKYYDe4fibmTHIdBQk62NBXoWdmuCNfzsI8IA8QkSSf6Ufi7eJsOLCwpMRkMnb5ip+HYw4XDmPC7sY6gbfr1ofE8XUS4JNwiAT+6P60E7C1RFxJQgCTLbsfPnW+H/7qn+83f+SzS3Do11tJJNWDheGnCkc1xN0f8NmqdITtg62GbxZT7CvbHCrDYbDs1sZnVyzgsHJF24oO+XQKN1O1NsIrZG15evKhMLphMMeiPr0+/u0EzNC/E8ORLTnvr3wMVUqhBMHQuTOWRrCijeO25y7x3NjYwf8AQ2+ftUXEnzWWjZUbX1k/r1p5xCyDYBAlwlkn/J+zqJ9jHzo2ChEMNZSzhyy3XLWVae/ZQJLDKogwNNvOoS9gaixcOh+K+5G28ZdY39qJVw+Hw3+G13Z8mS44I+UH+YVAyaaEj0NK50MoWK+6Y7An0FbjCuAWKkAcyI/Gi3S7EZzHqf60E2FaDpyrKd+TONeBxiG7rC2bKmDdUX73Vi+qKfJVjTqZoBVBojFMbi2XHOzbU+TIvdsPmp9iK1s4ViYA+opm0KkzRkPrUvDrX3pT/wARGI/z2xm+qBx8ulbXsO6HxCPcH6iiuCLmxStys2rtxvdDbUepL/SsnZqo94YP/mG/3a7+Nut2shgVOx0rzh//AHhv91u/jbrwPQsJPwJPu9dTbuG2Z5gBWUn+Vo/lp79n9i2MVjGCqDntgaCYKsxHoSJ84pLwXTDtcP8Arr7MvmiKEn3aflR3ZPEZLmJb/bWv/TuVmarLt2x4OcXhXtIcraMp5ZlIYfUCoey3aIYibNxTaxNsfeWjz5Z0/iQ/SdeUu8PckA9RVS+0KyLX7PjE8N21eQAjdldgrIeoINIt6AR8Vd8BjnxhQvhr4UXioLNaZZAeP3lgmQPWlnavDXb1sYo4ixdQQFFsGIbUcyJjX2qbtN2gvW8TdVjmw8ZchgAzbBImJmSTVT4ddVbV8qpyJdSFzbC4rGPOCn/FVIr2KyHhuEt93dZ+8b762gUXWQa22OYwDJ0jyBpvwDgiX7zW7avbdBmn9quAxoDlKpM60BgcegXE+Ewblq4BMnLldD6w2UfzCvF4nYUlxbvC4QdReyiT/lUGPKaZ9GOyWhlUKzSfM7/raqF2owCJxPDultTca1dc+Gc1xLbFGjm2aPkKquDuXL2Kw+cO1wXEgSxMBgx+IkjSTp0q88cb/wCr4L/Jd/5DU0qYTkOJxLuzO7FnYyzNqSfOa0t3B+8qH+QfiBVo+03gvcYo3FH3d6WEbB58Y99G9z0qnK9Ui7AxwmgGQAa6dPF4Tpz0JoRbTd4pJJOUnX/Kw0HStLV0gGNwJAPUaitrWJzjMJ1ttt1An8qnkjTtFYSuNMsWFwdsQ5teIQZy65omSd550NxfFjPbliWB5g5h+oFT2MSxthS10rr4TcbLvvknLOm9LuIX1TLIbLm6zHtHrUmrZaEqXQj43ayX3kEBjmHof7zQrGNqa9pMYt3u2AgRA5HzkdJpTajMMzMF5xqY8prpi9HLkVSYdw9WIKnUMCpC+JwSJByjUgEcqyvRaslibd/KDGjLB5c9fPpWUKNy9lq4Nw/C3rJFyRcGxFC3+zYHw3JpRhLr7JJJ5Ct/2i/0b5Go7KVs1Xhv3gR2CKTq5BIHyp3cfBqoQ3WYAa5UOp9ZGkeVL3w2IVc7o2U9RFI7rGTRWzWhrh8XYVywRh01/vRB40f3U0mR61rh7XdKFYAkiTIk661BfvgQi/o0E7GPcl2+0R862Xh5N0WlMnmeQpzwq0LaFidhJPn5Ux4Jwtkm46+JtfTy/wClB5KMoWM+GcNFm3CAE6Ek6bfhS7hSn9nfTX9qvRvHw2qsS3QBuIgAxJ6Tt6/hVf45xMWgBvJkKZ0J3MHReW25E670EwtGouHKdPoeVD2jGFw0/wAD6f8A97tBWON52hlEnnE+2p22+VH3Q5VZJ0GmYkwN4G8DyFPdaB3sgx9wdw4A1ymdPLamnEgSEHLurPT/AMG3SxrjLKkf2FSu7N8ZLee5gREzroBHtSuWqNWxffw725KaqTLLPPbMPOAPkK2VmJAyXAYJgow0GpIMQREnejTeWNfYH9edRNiXSQrsFO4ViqkH03mTQ5X2FR9Glu6ZiibZkHSKCgRpPKirUkTMjnNc02joitAF9HtkldVJkr56ajz29YFe2uIIphzk8mBUj50yvWRpoI5mdqjt33t6JcYL0BMfI6VeGWMlTIyxtPR5Zu3L5y4dGu9TEWl6lnPhA50XfVcPa7lGDtcIa9dA0cr8KJ/s1+pM1u2KuXlIe4xHIFjHlptUXErUgDXwxHyrRzRT4ozxtq2B4bGKl4sQxzWLiAKrMSxKQIUHoaJt8MdxmxGbD2OYbS/dH8KJuoPNmioMHduW80FkJXcEqSJGkg7TGnlWpuE6kyeZJkmrOaJ8GNcZiQ5WFyqAFtovw20XZf11rfsxBOIzbG9Zn0yXJpZh7hkHpv71M2LKggEgTMTpPWOvnSqY7gdOxnFbdi0btwkII2UsddBAUEnlVcdrvEb9pjae1hLLd4O8GW5fuD4fDutsHWTvp7N+FvNpA2vgE+elNbRHIRWUkiLRXON8Yw6XWS3hDiMVAgLZ5kQC9xhCiANZ5VBwrslOHZb7jvLlzvbmQDJmggIs/uqNPWashtgmY1O/pynrW5uVufoFHM+2fAxhTba3GoIBI0eIzKw6bUmvYlWQE2CnUi3KeUMo39Yq4/aUha3aIgBWbUmBqE/XtVS4YzIrEMVaRBUlT8xFUi7QGdB7C4FBh0uG2BeJcOxH3kB2AWTqNAulDcY/+7YPT/V3P+Q1VeGdocRa0t3MwYk+Lxyx0Jk6n51ZOzHHXv3mW8gDBdHErqP3Y5khp05Dag007MmNe1nA1xdp7Z+LLKH+G4PhPvJB8ia4JcUyREMJDDmCN/lX0cYzSYmK4x9o3BTYxPfIIS8SRHK4PiHv8Xu3SkxS3QWiuYfGxGYTGzDcf1qIXTbcjdSDH+VgRPrBr2yysdfA3UDQ+3I1pjoIGviXQiI0/sfxrp8Cl14Rc8CkMpgQQS2hESPCdDTHh+BS6t3vAHXJMGSFIMzI1G2lUbszjCLoQnwtMzy0MH5/jXSuz1kAvBzaDqpBB1G8SRMfWueMayItyuByjiOlxk1yqfCJJAmDz196JsYK29sxdCtr8akTGwGWVg9SR6dPe0VlUxDgPn21mTMDTy5b1pgrZI0FdWOKb2c05NE2B4KTILDX4dmBbp+Ne1FjLcQDvp0rK2RJOkaLbQ37KtGJt+tdz4Tg7cA5Fn0Fe1lc8SmTsn43hEe0yuoIjYivnZrQGIKgaBzp6TWVlCRsfYw4k5yr6CkiuZnnXlZQh0VZbuznj7sNqJ/AEirRaPiI5D+v1rKyoy7KLohuHw+5/Oqrxti121m18K/WD+JNZWU0OwS6JMXZXKTAkZQI05eXpWuAus2hJIA0121/uayspxAy2viP+WfrSLiWIYsQTtH4VlZWh2aXR5wu4cxHIinFzSPbz5kVlZS5ex8XRFYMbUwsbxy0/KsrK48x1Y+gm4In0H5UOyiT6V5WUsDTNsG2qjlNM7tsFmkfrSsrKaXYF0IuIGLjDkDoOlD5jWVlWh8USfYRgWPi9K0unSvaynXYH0dD4QxgDkEWPl/YU8VtPasrKc52ef0rW429ZWUphL2twyPhLmdQxVZUkAlTpqDuD6VzZ7pVwVhT3ds+EBdcsEwBExzrKyqQFYJgsbctYq21tipJykiNidRVu4FhkbijoygqLRugcu8zqc/rJNZWU8gIvL/F7fnVX+0xAeH3SQJD24MajxqNOmhI96ysrmj8kO+jjGJ5GmgQG2SRJjf2rKyvQiSI+ytlWu+IT4TV2XA2wj6HRMwGZiJ6xMVlZUL/AOh0JL9bKvhuHWrmNuo6yufaSNzrsZpXh2IGhrKyuzB2zjymt9zE+frWVlZQz/I2Lo//2Q==" alt="Production Begins" class="film-journey-image w-full">
+          <div class="p-6">
+            <h3 class="text-xl md:text-2xl font-semibold mb-3 text-blue-700">Production Begins</h3>
+            <p class="text-sm md:text-base text-blue-900">Principal photography started in Sicily's Aeolian Islands in June 2025, with Nolan using newly developed IMAX cameras to capture the mythic landscapes in unprecedented detail.</p>
+            <div class="mt-4 text-xs text-gray-600">June 2025</div>
+          </div>
+        </div>
+        
+        <!-- Epic Battles Filmed -->
+        <div class="film-journey-card rounded-xl shadow-lg overflow-hidden opacity-0 hover-glow" id="battles">
+          <img src="data:image/jpeg;base64,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" alt="Epic Battles" class="film-journey-image w-full">
+          <div class="p-6">
+            <h3 class="text-xl md:text-2xl font-semibold mb-3 text-blue-700">Epic Battles Filmed</h3>
+            <p class="text-sm md:text-base text-blue-900">The massive Trojan War sequences were shot over 12 weeks with 1,500 extras, using practical effects and minimal CGI to maintain Nolan's signature realistic style.</p>
+            <div class="mt-4 text-xs text-gray-600">September 2025</div>
+          </div>
+        </div>
+        
+        <!-- Post-Production -->
+        <div class="film-journey-card rounded-xl shadow-lg overflow-hidden opacity-0 hover-glow" id="post-production">
+          <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcShan7xxXtaERQPvcAD98enpNV78b1oJOvN_g&s" alt="Post Production" class="film-journey-image w-full">
+          <div class="p-6">
+            <h3 class="text-xl md:text-2xl font-semibold mb-3 text-blue-700">Post-Production</h3>
+            <p class="text-sm md:text-base text-blue-900">With a runtime of 3 hours 12 minutes, the film features groundbreaking practical effects for mythical creatures and a revolutionary sound design approach for the Sirens' song.</p>
+            <div class="mt-4 text-xs text-gray-600">January 2026</div>
+          </div>
+        </div>
+        
+        <!-- World Premiere -->
+        <div class="film-journey-card rounded-xl shadow-lg overflow-hidden opacity-0 hover-glow" id="premiere">
+          <img src="https://m.media-amazon.com/images/M/MV5BMTk1MjM3NTU5M15BMl5BanBnXkFtZTcwMTMyMjAyMg@@.V1.jpg" alt="World Premiere" class="film-journey-image w-full">
+          <div class="p-6">
+            <h3 class="text-xl md:text-2xl font-semibold mb-3 text-blue-700">World Premiere</h3>
+            <p class="text-sm md:text-base text-blue-900">The star-studded premiere is set for July 10, 2026 in London, followed by global IMAX releases on July 17. Nolan promises "an immersive experience that transports audiences to ancient Greece."</p>
+            <div class="mt-4 text-xs text-gray-600">July 2026</div>
+          </div>
+        </div>
+        
+        <!-- Critical Acclaim -->
+        <div class="film-journey-card rounded-xl shadow-lg overflow-hidden opacity-0 hover-glow" id="acclaim">
+          <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQJnTumFgIL36kJW314ivYf021nH8yKUg0oeQ&s" alt="Critical Acclaim" class="film-journey-image w-full">
+          <div class="p-6">
+            <h3 class="text-xl md:text-2xl font-semibold mb-3 text-blue-700">Critical Acclaim</h3>
+            <p class="text-sm md:text-base text-blue-900">Early screenings have earned praise for Damon's performance and Nolan's faithful yet innovative adaptation, with critics calling it "a technical marvel" and "the definitive Odyssey for our time."</p>
+            <div class="mt-4 text-xs text-gray-600">August 2026</div>
+          </div>
+        </div>
+        
+        <!-- Awards Season -->
+        <div class="film-journey-card rounded-xl shadow-lg overflow-hidden opacity-0 hover-glow" id="awards">
+          <img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wCEAAkGBw8PDw8PDw8PDw8PDw8PEA8PDw8PDw8QFREWFhUVFRUYHSggGBolGxUVITEhJSorLi4wFyAzODMsNygtLisBCgoKDg0OGxAQGS8gHyAtKy0rKy0tLS0rLS0rLS03KzUrKy0tLS0rKy0tKy0rLSstLi0tLS0tLS0tLS0rLSstLf/AABEIAK0BIwMBIgACEQEDEQH/xAAcAAACAgMBAQAAAAAAAAAAAAAAAQIDBAYHBQj/xAA/EAACAgEDAQUGAgcHAwUAAAABAgADEQQSIQUGEzFBUQciYXGBkaGxFCMyQnKSwRUzUmKCorLR4fEkNENT8P/EABkBAQEBAQEBAAAAAAAAAAAAAAABAwIEBf/EACQRAQEAAgICAQMFAAAAAAAAAAABAhEDIQQxEiIycRNBQlFh/9oADAMBAAIRAxEAPwDa0WXqsiglqieR7UlEsVYlEsUShqJMCAEmBAAJICAEkICAjhHAUcIQCEIQCEIQpQhHAUIQkBCERjQIQhICKOEBRRxQIkSJEnERCqiJWRLiJBhIKWEqYS9hK2EKxmEpcTKYSlxAxSI5YRFIM5BLlEgglqiaOElEsAiUSaiAwJMCICTAgISUBCARwhAIQhAUI4oUQhiEBRwmPrdUtSF2I4BPPA4HJPwkt0J33onLMB6ep+QmPp+q6ew4W1c+h8ftNBo6zZqrbbP0ZrU95EezwQjglV+Hz+Uhoa7uCEYuSR72SQDjHPj45mVyyv8AjT9Oug6vXrXjwYeZB8PpMmuwMoYchgCD6gzX9HoSE/W53Y9eRINrmT9TaccE1WqNp4Hhx4kTmZ2de1vFZNtlhMDouu76s7sd5WxR8eZwCG+oIM9CbMihHFKFCOKQKIiSihUCJAiWmQIgVMJWwlxErYSChhKXEyWEqYQrHIhJ4hAzEEtUSCCWqJ04SUSYEQEmBKGBJCICOA4QhAIQhAIQhCiEIQCEIQFNa67d3z2UeI91Dz5Yy35MPrNmmr9UoNeq3DO11LH8MzjJ1h7ZvS9KqKqqAAAABiemmnUc7Rn1xPD0/XdOoXcxA4GQrEZ+nhPdXUoV3K+V9Zni9eV36Y2qrnjdWp3IQOCCGB88/CZ1/XNOWKgksvicEKPrPN1WpFiu1Zzx/wCRHW1yy3jpZ2QRhZcTwCqDjwOCcEenifwmzzX+yyHNpbxCoPoxP/QzYJrHivsRRwhCikjFClCOKBExSURgVsJWwlrCQIkVSwlTCXsJWwgUYhJkQkGUolqiQUSxZ24SAkxEJIShiPEI4CjhCAQhCFEIQgEIQgEUcUgJ5HVVzaoOdu0AenJOZ6887rVJKq4/cPPyJA//AHznN9O8LqvNfop5xdaqnwVH2qB6Ywc/WTp0y1pZWMkcckng/DEvXVNs590eBP8AQTCW3UBWTuQ5c+7YCdgH+fJz9szj29mOM9pt0NXAxZeqjkBLnQeHgduI9bp0qQAZ9CT4mXaN2QbWcd5ySFBVT8AMnExuqEnBbwBMVzljIzuhV7e8OSd20kn15xj7kfSerMbp9BRMNjJwePADAGPw/GZM0jy53dEIQhwIo4oURRxQCKOIwImVmWmQMiqmlTCXNK2gUmEliKQZayxZBZYJo4TEkJESQgOOKOAQhCFEIQgEIQgEIQgERjkT+fElospUMDz4HExm22Iy+TAiZlNAXPid3jMZqVrwAeCcAGefDk3lY608FLB79FoBOdrKR5+RHwPjCrpCKMKtZHnlfw+Mr7U6c767EOGKlSR6ryufnk/yzyl63qU4NQb0PP3mmtV6uPk1HuUaSmjLhU3EeIULiYGq1IttRM4QOu8+Q3MJhtdfaRuGB44Hhn4z1Om9FewBRwM7nfHAPoPU/CNGeW+7WyGKYJ14TUjSMNuag1LZ/b25DJj1AAOfPn0mdO3j3sQhCFEUcUAijigEUcUBGQMmZEyKrMqaWtK2gVwjhIrJWWLILJiaOExJiREkIQ4QhAIQgYUQgIQCEIQDEIQgEx9XkDI8uZq/aLt9RpLbNOtVltteASSqVZxkjdySRkeX1mo9R7e624EKyUr6Vrzj+Jsn7YnFqfKR1+3XVInePYiJ/idlVfuZpvaPt5pE/uSb2QMeAUQt5DcfH6Cct1WtexsuzOfVmLH8ZgX3cHPymGPBq7c3l/puVXbq39C6he3d2XtqdMqVupNaqynGFBB4Wp+c5zzmez2e7Z6G5ALrF0dpzkX5ah8DPu2490/5WA9Mmcw6Xob9UX0+nqstYmu0isbiAm9Rn0H63xmT0joGr1v/ALWh7Qp81KqWAOQCcZPB+098wx0zx5cp6dP1fbfpenUmuz9Mu5200BlTOOC9rAAL/Dkyz2f+0XUa/WDRXUUIu21w9IdcKFyqhSTjGGyec5HhjnQbvZ91hVFh0bjHGFakED+bJmZ7J63TrddboyWrVqA6upVlO3zB+ssxk9JlyZZXt6HtY6o6dTRUODRVWRg+DNlvL4EfeZvS+311da94FvwVzuYhhkeT+f1Bmj9tuofpHVNfcDwdTZWv8NWKl/BAfrMTTXYX5ssw5OPuWEysdo6d250VuA5ehvRxuX6Mv9cTYdNq6rRmqxLB/kdW/KcBFuJIasryDgjwI4InOsmk5H0FFOI6PtnrqCAmodlH7tuLVxjw97kfSdR7F9e/tDRpecC1S1VyrwBYvmB5Agq31nWq7xzle7FHFI6EUcUBSJkpEyKraQaWGVtAqMI4SDJWWLK1lizRymJMSAkhCJQhCFEIExZgOEWYZgOEjuhugSnmdpN/6Hqu7c1uKXIcNtK4GSQ3lxnnynobprXWNe9z3aZRt2W1IMlk7zKLZw54JYnaEHpnPIB4zuoRontE6gXro3rbWy2BFquADBAj7nGFXCksgGeTiamH4m59qunV6o/ri1WosZgmDvXvSpfZgnHgoJxg5Px50PDKTW2NyMUbByMqcHn5iXh1lh0y5JZWRumA7mZO7nExG8T85rMWVbv7Ggv9rqrDIt0uorxkjkFH8v4J9A6bSpXwgwMk4yTz9Z82+za/u+sdPbOAbmrPx7yp0A+7CfTIHnNEhkTyOrrp9NXfrmrQPp6LrO82jeFVCxAPx2iesTmaP7Zuo9x0e9QcNqXq0y/EM25x/IjwPnask8scseWPqx5Jl4bBX55mOh5luefkIs7RlLbDczEKqszHwVQWY/IDxlSNPe7E6nbqWQPsa2vbWwbYd4dTjeBlQV35I/pM878Za7xm7prt+5SwZSrAYKsCrKT6g+HH5zdvY71XutXZpmbC6mrKAnjva+cD4lC/8s1/tcHFqK+SypYu5mLEgam7aCx5OBjx5xieV0vXNpr6dQud1FqW4HiQpyy/UZH1nU+rFftyfS+YZlSWBgGU5VgGU+oIyDHmYPSmTFmRzCFMtIFoEyBkATIMZImVtAjmEjCRWassEqWWLNHCwSQkFkxAcMxRQDMIRGAExZgZGBIGEUDARM1fqCOuus3s3cWV03VIoGHvUNU+W8Vwmz1/vAcHbibOZ4nXLAb9FTv2s1y2jBwdiX0hyc8Yw58fWccn206/drXaLUE3VWWEV76r8Kc5O2skt6YHhzk5Ct5TlNNuTuJOW94k8nJ55m5dqrheNWQgrBFhUIqCtv1y2knaMbitfj8TwfLQ0PhOvG7wY8vuM0vzmVNyfr/3/rK3s8hJ0nOR68/Uf9sz0SMmf0fUdzqNNcTgU6jT3E+gS1WP5T6wHlPkjZuVl9QR9xPqjoGs/SNJpL//ALtNTZ/NWrf1lpHoGcX9v/Uc26HSA8IlmqsHxY93Wf8AbbOzmfNntL6h+k9W1j5ytTjTJ8FpG1v9+8/WSDT3kxE45hulRaeBN87M9HpRkKBbrmpezc5GBt4sFfiBgMPEc7sZ5xOfG2bt2e6ovc6VU2izd3dqoyJaV5RcFgRnHPwOz5zzeVv4dN+HXybf1PodNmG19YVLgoGxCzPe5VFKCvbtJZl58+ASc88d6hp+6tdBnCsRz448s/HHjOwdU0yPUMXXslKEkj9He65wm1UezPvrnaxJDHOefTj+vsD3XOv7L22uMejOSMfeZ+H6sl2vPPW5p3XsBrO+6Xo2ySVq7k58c1Ma+f5J75nOPYx1ItTqdKx/unW5P4bBtYD5MgP+udHM1ymq0wu8YBCKOcOiMgZIyBgIyDGSMg0KhHImEgzVlimUqZYs0cLRJysGTBgOEIQCIwgYETFGYoDgYCBgVu2PvPM1PTKNRYLnBFioakYWMNqFg548M5VfLymbqvTOARj5HyMVVXHK7z64U/ac2bejDCfHbVNP7Pa2Flb6q7Yy7cjYGIbPmQRnlvLwCzk/a3on9n6t9MLe9UAOj42ttJIww/xDBHH9cTuHV9ZbUyCpc95hSH35U5GCvw9Zx72kXI2u2qdxSlFdh5uWZj/yH3l4Zq6Y+ThjMfk1pZdW2Dn0lCGWpPS8L0qx9jz9J9CeyzWd70nSetYtpI9BXayr/tCz540jcY81/I+H9Z2f2Ha3NGqoJ5ruNij0R0Qf8lb7yVY6RrtStNVtzfs1VvY3yVSx/KfKd9jOWsf9uxmsY+rMck/cmfQvtW13c9J1IHjfs0wHqLXCv/s3/afPWpOB8vx9IgwnlbGTMpcyoC4ns9lamssv28ldOzY+ViHP0CmeATOrdh+wijRJrnveu+5QyIuNiUN4bh4sWGDnjHhMue/RWvFLcpo+0RWzpbs2oZ2/d22Eg+67uLS3JYd2vww3x45ax8/6zvnSuyulWnbqT35CbCG92vlcNtUc8jjkmYXWexHTrqLRVpqqnwRXZSChV8cHAOCM+sx8e/Car08nBln3HPPZZre76pUAeL67aGGfPb3i/jWB9Z3Az5t6NrjpNXp9Qy4OnvRrF/yq2HHzxmfSQIIyOQeQfUTXkne2PFetCOKGZm2IysybGVkyBGVsZImVsYVHMIsxSDNUy1TMdTLVM0cLgZMGVKZMGBOORBjgOKEICMjGZEwJAwMiDHmBg9V1VdKCy1lVQwTLMFGWIAGT6nEqq19O0neVUeI3oAo9eZqntW1AZdBpSRi7Vd7YCSN1VK+8vHOTvGPiBNb6H2qo326c0ai3TGwiilRSe6pHghDH3iPn4TnOZa3jNtOPmxx6yb113rdBrYac9652op3bl3uwRACOMlyonD+0liNrtWazlBqLFQ/4lVtob67c/Wb317tbTUUbT0XUuuApsqqGxRkHbtsx+yxxxx8PGc36o9RZTSNqlPeXDDDZPAyTkYxzn18JpwzL+UYeRyTPWkEeXo0xK5lVzd5oyabdrA+XgfkZ1D2Kavb1K2ryu0rn/VW6kD7M/wBpyzHlNj7A9V/R+oaK0k+5qErfn/47c1MT8Ark/SSq6V7dNdxodL6vbqW58Ni92mfn3j/yzjOps3NjyHJ+fl+H5zdPbD1XvOragc409dOmX0JC94cf6rSP9M0VPDnxPJ+cQNjKHMsdpRYZUQsGZ1fsv22XW2afRGoadKqhwr82FMAKOPDz9eJyVmns9iurDS6+mwkIjHurGbwVGI976EAzjPHcbcPJcMvy+g0C7ciok+R7t3b6E8xmvjluSMjkYAlKOpU5ssx45UKOD8ZiavqlFYSrcd1rJTWDgsWYhRx9eTPPMpX1N2duEdbxZqdQ6/v33Njy5cnido9nfWzrNBXvP63T/wDp7fiVUbW+qlfrmcNvcB2KHKh2Kn1XccfhNz9lnVTVr+5ye71aMu3y71FLqfhwLB9ZtlOnysMvq/Ls2YiZXuiLTF6UmMgYi0gWkDJlbGDNK2aFGYSvdCBmqZcpmMhlymduF6mTBlIMkDAuBjzKgZLMCeYZkMxQJEyJaEgTAC0W+RMiYGg+1DTs1/TLf3VsurP8RCMPwVvtNC7IqH1SKMISXGWbAJwxySxwOOJ7ntV6jadX3Id1RAhCq7hc7c525xnk8zWekdR0+n3Pdpm1HAwBctWDnxJNbZmuPphn9z0O3Gk7o1+DZDchkYcEehmoWCbJ1Trmk1ChadC2ncEEudQloK4xjaKl+HOZ4dh8eB9fKdxnYqrmShmOolqmVGSDDeVIYEj1I8R8R8vGQEC2eIGR1DW2am+2+w5e217m5J992JI58hnH0leYLVgNznawHh45z/0gYFbSmyZJEqeBitPU6RRpCm68+/3qjBd1HdnxOFBJI+n38fNsgnh/rH5GTKbmlxuq7Np+0fTkq/v9P+ycLu1jsMDAwBQOcDzJ+c0rV9oRbZqNrfrO4ZNNe3eM9Y4LnLkke4DjAyDg4zPDQ+79Jj6MfrwD+8rr90M8+Hi4YXcb5eRnl1axSZtPs0pL9T05HhULrG+C9yyf8nWamo8B64E6x7KelImns1ec2XMahxgIiN4D5nBPyHpztndRnhN5Ogb4i8qJizPO9S0tIFpHMixgMvK2aImVsZFS3QlWYoH/2Q==" alt="Awards Season" class="film-journey-image w-full">
+          <div class="p-6">
+            <h3 class="text-xl md:text-2xl font-semibold mb-3 text-blue-700">Awards Season</h3>
+            <p class="text-sm md:text-base text-blue-900">Projected to lead the 2027 Academy Award nominations with potential nods for Best Picture, Director, Cinematography, and Visual Effects, among others.</p>
+            <div class="mt-4 text-xs text-gray-600">January 2027</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Cast Section -->
+  <section id="cast" class="py-16 px-4 sm:px-8 bg-gradient-light">
+    <div class="max-w-6xl mx-auto">
+      <h2 class="text-4xl md:text-5xl font-bold text-center mb-12 font-['Exo 2'] text-blue-700">Stellar Cast</h2>
+      <div class="grid grid-cols-1 gap-8 animate-card">
+        <!-- Matt Damon -->
+        <div class="cast-card hover-glow" id="cast-damon">
+          <img src="https://m.media-amazon.com/images/M/MV5BMTM0NzYzNDgxMl5BMl5BanBnXkFtZTcwMDg2MTMyMw@@.V1_FMjpg_UX1000.jpg" alt="Matt Damon" class="cast-image">
+          <div class="cast-content">
+            <h3 class="text-2xl md:text-3xl font-semibold text-blue-700 mb-2">Matt Damon</h3>
+            <p class="text-lg text-blue-900 mb-4">as <span class="text-amber-600">Odysseus</span>, the cunning King of Ithaca</p>
+            <p class="text-base text-gray-700">
+              Academy Award winner Matt Damon brings depth to the legendary hero, capturing both his strategic brilliance and human flaws. 
+              Damon trained for six months to perform his own stunts, including the famous bow contest scene shot in a single take.
+            </p>
+            <button class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-bold transform hover:scale-105 transition" onclick="showActorDetails('damon')">Learn More</button>
+          </div>
+        </div>
+        
+        <!-- Zendaya -->
+        <div class="cast-card hover-glow" id="cast-zendaya">
+          <img src="data:image/jpeg;base64,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" alt="Zendaya" class="cast-image">
+          <div class="cast-content">
+            <h3 class="text-2xl md:text-3xl font-semibold text-blue-700 mb-2">Zendaya</h3>
+            <p class="text-lg text-blue-900 mb-4">as <span class="text-amber-600">Penelope</span>, Odysseus' loyal wife</p>
+            <p class="text-base text-gray-700">
+              Emmy winner Zendaya portrays Penelope with quiet strength, showcasing the character's intelligence and resilience as she 
+              fends off suitors while maintaining hope for her husband's return. Her performance includes a haunting rendition of the 
+              weaving motif through sign language.
+            </p>
+            <button class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-bold transform hover:scale-105 transition" onclick="showActorDetails('zendaya')">Learn More</button>
+          </div>
+        </div>
+        
+        <!-- Tom Holland -->
+        <div class="cast-card hover-glow" id="cast-holland">
+          <img src="https://m.media-amazon.com/images/M/MV5BNzZiNTEyNTItYjNhMS00YjI2LWIwMWQtZmYwYTRlNjMyZTJjXkEyXkFqcGdeQXVyMTExNzQzMDE0.V1_FMjpg_UX1000.jpg" alt="Tom Holland" class="cast-image">
+          <div class="cast-content">
+            <h3 class="text-2xl md:text-3xl font-semibold text-blue-700 mb-2">Tom Holland</h3>
+            <p class="text-lg text-blue-900 mb-4">as <span class="text-amber-600">Telemachus</span>, Odysseus' son</p>
+            <p class="text-base text-gray-700">
+              Holland brings youthful energy to Telemachus' coming-of-age journey, showing the character's transformation from uncertain 
+              boy to confident leader. His chemistry with Damon creates a poignant portrayal of father-son reconciliation.
+            </p>
+            <button class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-bold transform hover:scale-105 transition" onclick="showActorDetails('holland')">Learn More</button>
+          </div>
+        </div>
+        
+        
+        
+        <!-- Charlize Theron -->
+        <div class="cast-card hover-glow" id="cast-theron">
+          <img src="https://m.media-amazon.com/images/M/MV5BMTk1MjM3NTU5M15BMl5BanBnXkFtZTcwMTMyMjAyMg@@.V1_FMjpg_UX1000.jpg" alt="Charlize Theron" class="cast-image">
+          <div class="cast-content">
+            <h3 class="text-2xl md:text-3xl font-semibold text-blue-700 mb-2">Charlize Theron</h3>
+            <p class="text-lg text-blue-900 mb-4">as <span class="text-amber-600">Poseidon</span>, vengeful god</p>
+            <p class="text-base text-gray-700">
+              Theron's commanding presence brings terrifying majesty to Poseidon, portrayed as a mercurial deity whose wrath manifests in 
+              spectacular practical-effect storm sequences. Her performance was motion-captured for the towering water effects.
+            </p>
+            <button class="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-bold transform hover:scale-105 transition" onclick="showActorDetails('theron')">Learn More</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Actor Details Modal -->
+    <div id="actor-modal" class="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 hidden">
+      <div class="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto p-8 relative">
+        <button id="close-modal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+        <div id="actor-details-content">
+          <!-- Content will be loaded dynamically -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Legacy Section -->
+  <section id="legacy" class="py-16 px-4 sm:px-8 bg-gradient-medium">
+    <div class="max-w-5xl mx-auto">
+      <h2 class="text-4xl md:text-5xl font-bold text-center mb-12 font-['Exo 2'] text-blue-700">Legacy of The Odyssey</h2>
+      <div class="book-container animate-card">
+        <div class="book-cover" id="book-cover">
+          <h3>The Odyssey</h3>
+          <p>Christopher Nolan's Cinematic Adaptation</p>
+        </div>
+        <div class="book-spine"></div>
+        <div class="page page-1" id="page-1">
+          <div class="page-content">
+            <h3 class="text-2xl md:text-3xl font-semibold mb-6 font-serif">Homer's Timeless Epic</h3>
+            <p class="text-base md:text-lg font-serif leading-relaxed">
+              Written around 750-650 BC, The Odyssey is a cornerstone of Western literature, chronicling Odysseus' 10-year journey home after the Trojan War. Its themes of resilience, loyalty, and hubris have inspired countless works, from Virgil's Aeneid to modern films like O Brother, Where Art Thou?.
+              <br><br>
+              The epic's oral tradition and vivid characters—like the Cyclops and Sirens—continue to captivate readers, cementing its legacy as a universal tale of human struggle and triumph. Christopher Nolan's adaptation promises to bring this ancient story to life with groundbreaking IMAX technology.
+            </p>
+            <div class="page-number">1</div>
+          </div>
+        </div>
+        <div class="page page-2" id="page-2">
+          <div class="page-content">
+            <h3 class="text-2xl md:text-3xl font-semibold mb-6 font-serif">Nolan's Vision</h3>
+            <p class="text-base md:text-lg font-serif leading-relaxed">
+              Christopher Nolan reimagines Homer's epic with his signature blend of practical effects and cutting-edge technology. Shot on location in the Mediterranean using specially developed IMAX cameras, this adaptation aims to capture the grandeur of Odysseus' journey like never before.
+              <br><br>
+              The film features an all-star cast led by Matt Damon as Odysseus, with groundbreaking sequences including the encounter with the Cyclops filmed entirely in-camera using revolutionary scale techniques. Nolan's Odyssey promises to be both a faithful adaptation and a cinematic milestone.
+            </p>
+            <div class="page-number">2</div>
+          </div>
+        </div>
+        <div class="page page-3" id="page-3">
+          <div class="page-content">
+            <h3 class="text-2xl md:text-3xl font-semibold mb-6 font-serif">The Hero's Journey</h3>
+            <p class="text-base md:text-lg font-serif leading-relaxed">
+              Odysseus' archetypal hero's journey has influenced storytelling for millennia. Nolan's adaptation emphasizes the psychological depth of the character, exploring the toll of war and the price of homecoming.
+              <br><br>
+              The film's structure mirrors the epic's non-linear narrative, with the Lotus Eaters sequence featuring revolutionary visual effects that depict the crew's altered perceptions. The Sirens' song was recorded using binaural audio techniques for an immersive theater experience.
+            </p>
+            <div class="page-number">3</div>
+          </div>
+        </div>
+        <div class="page page-4" id="page-4">
+          <div class="page-content">
+            <h3 class="text-2xl md:text-3xl font-semibold mb-6 font-serif">Mythic Encounters</h3>
+            <p class="text-base md:text-lg font-serif leading-relaxed">
+              Nolan's practical approach brings Homer's mythical creatures to life without relying on CGI. The Cyclops was created using forced perspective and a 25-foot-tall animatronic, while the six-headed Scylla was realized through intricate puppetry.
+              <br><br>
+              The underworld sequence was shot using infrared photography to create an otherworldly effect, with cameos from fallen Trojan War heroes appearing as spectral figures through innovative lighting techniques.
+            </p>
+            <div class="page-number">4</div>
+          </div>
+        </div>
+        <div class="page page-5" id="page-5">
+          <div class="page-content">
+            <h3 class="text-2xl md:text-3xl font-semibold mb-6 font-serif">Homecoming</h3>
+            <p class="text-base md:text-lg font-serif leading-relaxed">
+              The climactic return to Ithaca features some of Nolan's most ambitious set pieces, including a full-scale replica of Odysseus' palace. The famous bow contest was filmed in a single take using a specially designed IMAX camera rig.
+              <br><br>
+              The emotional reunion with Penelope showcases Zendaya's performance, with subtle visual cues revealing the couple's unbroken bond despite 20 years apart. The film's ending leaves room for interpretation, much like Homer's ambiguous conclusion.
+            </p>
+            <div class="page-number">5</div>
+          </div>
+        </div>
+      </div>
+      <button class="mt-8 px-8 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 font-bold transform hover:scale-105 transition mx-auto block shadow-lg" id="turn-page-btn">Open Book</button>
+
+      
+      <!-- Interactive Timeline -->
+      <div class="mt-16">
+        <h3 class="text-3xl font-bold text-center mb-8 font-['Exo 2'] text-blue-700">The Odyssey Timeline</h3>
+        <div class="relative h-[200px] overflow-hidden" id="timeline-container">
+          <div class="absolute top-1/2 left-0 w-full h-2 bg-blue-200 transform -translate-y-1/2"></div>
+          <div class="absolute top-1/2 left-0 h-2 bg-blue-500 transform -translate-y-1/2" id="timeline-progress"></div>
+          
+          <!-- Timeline Points -->
+          <div class="timeline-point absolute top-1/2 left-[10%] transform -translate-y-1/2 -translate-x-1/2 cursor-pointer" data-year="1200 BC">
+            <div class="w-6 h-6 bg-blue-500 rounded-full"></div>
+            <div class="absolute top-8 -left-16 w-32 text-center">
+              <div class="text-blue-700 font-bold">1200 BC</div>
+              <div class="text-sm text-blue-900">Trojan War</div>
+            </div>
+          </div>
+          
+          <div class="timeline-point absolute top-1/2 left-[30%] transform -translate-y-1/2 -translate-x-1/2 cursor-pointer" data-year="750 BC">
+            <div class="w-6 h-6 bg-blue-500 rounded-full"></div>
+            <div class="absolute bottom-8 -left-16 w-32 text-center">
+              <div class="text-blue-700 font-bold">750 BC</div>
+              <div class="text-sm text-blue-900">Homer's Epic</div>
+            </div>
+          </div>
+          
+          <div class="timeline-point absolute top-1/2 left-[50%] transform -translate-y-1/2 -translate-x-1/2 cursor-pointer" data-year="1922">
+            <div class="w-6 h-6 bg-blue-500 rounded-full"></div>
+            <div class="absolute top-8 -left-16 w-32 text-center">
+              <div class="text-blue-700 font-bold">1922</div>
+              <div class="text-sm text-blue-900">Joyce's Ulysses</div>
+            </div>
+          </div>
+          
+          <div class="timeline-point absolute top-1/2 left-[70%] transform -translate-y-1/2 -translate-x-1/2 cursor-pointer" data-year="2000">
+            <div class="w-6 h-6 bg-blue-500 rounded-full"></div>
+            <div class="absolute bottom-8 -left-16 w-32 text-center">
+              <div class="text-blue-700 font-bold">2000</div>
+              <div class="text-sm text-blue-900">O Brother, Where Art Thou?</div>
+            </div>
+          </div>
+          
+          <div class="timeline-point absolute top-1/2 left-[90%] transform -translate-y-1/2 -translate-x-1/2 cursor-pointer" data-year="2026">
+            <div class="w-6 h-6 bg-blue-500 rounded-full"></div>
+            <div class="absolute top-8 -left-16 w-32 text-center">
+              <div class="text-blue-700 font-bold">2026</div>
+              <div class="text-sm text-blue-900">Nolan's Adaptation</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Call to Action Section -->
+  <section class="py-16 px-4 sm:px-8 text-center bg-gradient-to-r from-cyan-500 to-blue-600">
+    <div class="max-w-5xl mx-auto">
+      <h2 class="text-4xl md:text-5xl font-bold mb-6 font-['Exo 2'] text-white">Join the Cosmic Journey!</h2>
+      <p class="text-xl md:text-2xl mb-8 text-white">Get updates on The Odyssey and exclusive ticket offers!</p>
+      <div class="flex flex-col sm:flex-row justify-center items-center gap-3 max-w-md mx-auto">
+        <input type="email" placeholder="Enter your email" class="px-6 py-4 rounded-full text-gray-800 focus:outline-none w-full focus:ring-2 focus:ring-black shadow-lg">
+        <button class="px-8 py-4 bg-blue-900 text-white rounded-full font-bold hover:bg-blue-800 transition duration-300 transform hover:scale-105 w-full sm:w-auto shadow-lg">Sign Up</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="py-8 text-center bg-gradient-light border-t border-blue-200">
+    <p class="text-blue-900">© 2025 The Odyssey Ticket Hub. Built for the Web Weave Event</p>
+  </footer>
+
+  <!-- Trailer Modal -->
+  <div id="trailer-modal" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 hidden">
+    <div class="max-w-4xl w-full p-4">
+      <button id="close-trailer" class="absolute top-4 right-4 text-white hover:text-gray-300">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+      <div class="aspect-w-16 aspect-h-9 bg-black">
+        <div id="trailer-placeholder" class="w-full h-0 pb-[56.25%] relative">
+          <div class="absolute inset-0 flex items-center justify-center">
+            <div class="text-white text-xl">Trailer would play here</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Sound Effects
+    const sounds = {
+      click: new Howl({
+        src: ['https://assets.codepen.io/21542/click.mp3'],
+        volume: 0.2
+      }),
+      hover: new Howl({
+        src: ['https://assets.codepen.io/21542/hover.mp3'],
+        volume: 0.1
+      }),
+      page: new Howl({
+        src: ['https://assets.codepen.io/21542/page-turn.mp3'],
+        volume: 0.3
+      }),
+      space: new Howl({
+        src: ['https://assets.codepen.io/21542/space-ambient.mp3'],
+        volume: 0.1,
+        loop: true
+      })
+    };
+    
+    // Loading Screen
+    window.addEventListener('load', function() {
+      setTimeout(function() {
+        const loadingScreen = document.getElementById('loading-screen');
+        loadingScreen.style.opacity = '0';
+        setTimeout(function() {
+          loadingScreen.style.display = 'none';
+          // Start ambient sound
+          sounds.space.play();
+        }, 1000);
+      }, 2000);
+    });
+    
+    // Floating Navigation
+    const navToggle = document.getElementById('nav-toggle');
+    const navMenu = document.getElementById('nav-menu');
+    
+    navToggle.addEventListener('click', function() {
+      sounds.click.play();
+      navMenu.classList.toggle('active');
+    });
+    
+    // Add hover sound to all interactive elements
+    document.querySelectorAll('.interactive-element, button, .nav-item, .seat:not(.occupied):not(.booked)').forEach(el => {
+      el.addEventListener('mouseenter', function() {
+        sounds.hover.play();
+      });
+    });
+    
+    // Cursor Trail Effect
+    const cursorTrail = document.getElementById('cursor-trail');
+    
+    document.addEventListener('mousemove', function(e) {
+      gsap.to(cursorTrail, {
+        x: e.clientX,
+        y: e.clientY,
+        duration: 0.2,
+        ease: 'power1.out'
+      });
+    });
+    
+    document.addEventListener('mousedown', function() {
+      gsap.to(cursorTrail, {
+        width: '30px',
+        height: '30px',
+        duration: 0.2
+      });
+    });
+    
+    document.addEventListener('mouseup', function() {
+      gsap.to(cursorTrail, {
+        width: '10px',
+        height: '10px',
+        duration: 0.2
+      });
+    });
+    
+    // Particle Effects
+    const particles = document.getElementById('particles');
+    
+    document.addEventListener('mousemove', function(e) {
+      if (Math.random() > 0.9) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        const size = Math.random() * 10 + 5;
+        particle.style.width = `${size}px`;
+        particle.style.height = `${size}px`;
+        particle.style.left = `${e.clientX}px`;
+        particle.style.top = `${e.clientY}px`;
+        particles.appendChild(particle);
+        
+        gsap.to(particle, {
+          x: (Math.random() - 0.5) * 100,
+          y: (Math.random() - 0.5) * 100,
+          opacity: 1,
+          duration: 0.5,
+          ease: 'power1.out',
+          onComplete: function() {
+            gsap.to(particle, {
+              opacity: 0,
+              duration: 1,
+              delay: 0.5,
+              onComplete: function() {
+                particles.removeChild(particle);
+              }
+            });
+          }
+        });
+      }
+    });
+    
+    // Enhanced GSAP Animations
+    gsap.from("#hero-title", { 
+      duration: 1.8, 
+      y: 100, 
+      opacity: 0, 
+      ease: "elastic.out(1, 0.5)",
+      delay: 0.4
+    });
+    gsap.from("#hero-subtitle", { 
+      duration: 1.5, 
+      y: 80, 
+      opacity: 0, 
+      delay: 0.8, 
+      ease: "power3.out" 
+    });
+    gsap.from(".animate-logo", { 
+      duration: 2.5, 
+      scale: 0, 
+      rotation: 360, 
+      ease: "back.out(4)",
+      delay: 0.2
+    });
+    
+    // Parallax Effect for Hero Section
+    const parallaxElements = document.querySelectorAll('.parallax-layer');
+    
+    window.addEventListener('mousemove', function(e) {
+      const mouseX = e.clientX / window.innerWidth;
+      const mouseY = e.clientY / window.innerHeight;
+      
+      parallaxElements.forEach(el => {
+        const depth = parseFloat(el.getAttribute('data-depth'));
+        const moveX = mouseX * depth * 100;
+        const moveY = mouseY * depth * 100;
+        
+        gsap.to(el, {
+          x: moveX,
+          y: moveY,
+          duration: 1,
+          ease: 'power1.out'
+        });
+      });
+    });
+    
+    // Interactive Floating Planets
+    const floatingPlanets = document.querySelectorAll('#floating-planet-1, #floating-planet-2');
+    
+    floatingPlanets.forEach(planet => {
+      planet.addEventListener('mouseenter', function() {
+        gsap.to(this, {
+          scale: 1.2,
+          rotation: 10,
+          duration: 0.5,
+          ease: 'power1.out'
+        });
+      });
+      
+      planet.addEventListener('mouseleave', function() {
+        gsap.to(this, {
+          scale: 1,
+          rotation: 0,
+          duration: 0.5,
+          ease: 'power1.out'
+        });
+      });
+    });
+    
+    // Scroll Trigger Animations
+    gsap.registerPlugin(ScrollTrigger);
+    
+    const filmJourneyCards = [
+      "production", "battles", "post-production", 
+      "premiere", "acclaim", "awards"
+    ];
+    
+    filmJourneyCards.forEach((id, index) => {
+      gsap.to(`#${id}`, {
+        scrollTrigger: {
+          trigger: `#${id}`,
+          start: "top 80%",
+          toggleActions: "play none none none"
+        },
+        opacity: 1,
+        y: 0,
+        duration: 0.8,
+        delay: index * 0.2
+      });
+    });
+    
+    // Cast Cards Animation
+    const castCards = document.querySelectorAll('.cast-card');
+    
+    castCards.forEach((card) => {
+      ScrollTrigger.create({
+        trigger: card,
+        start: "top 80%",
+        onEnter: () => {
+          gsap.fromTo(card, 
+            { y: 50, opacity: 0 }, 
+            { y: 0, opacity: 1, duration: 0.8, ease: "power2.out" }
+          );
+        }
+      });
+    });
+    
+    // Comet Animation
+    function animateComet() {
+      const comet = document.getElementById('comet');
+      comet.style.left = `${Math.random() * 20}%`;
+      comet.style.top = `${Math.random() * 20}%`;
+      
+      gsap.to(comet, {
+        duration: 5,
+        x: "100vw",
+        y: "100vh",
+        opacity: 1,
+        ease: "power1.in",
+        onComplete: () => {
+          comet.style.opacity = 0;
+          setTimeout(animateComet, Math.random() * 10000 + 5000);
+        }
+      });
+    }
+
+    // Start comet animation after a delay
+    setTimeout(animateComet, 3000);
+
+    // Enhanced Twinkling Stars
+    function createStars(container, count) {
+      if (!container) return;
+      
+      for (let i = 0; i < count; i++) {
+        const star = document.createElement('div');
+        star.className = 'star';
+        const size = Math.random() * 3;
+        star.style.width = `${size}px`;
+        star.style.height = `${size}px`;
+        star.style.left = `${Math.random() * 100}%`;
+        star.style.top = `${Math.random() * 100}%`;
+        star.style.setProperty('--duration', `${2 + Math.random() * 3}s`);
+        star.style.setProperty('--opacity', `${0.3 + Math.random() * 0.7}`);
+        container.appendChild(star);
+      }
+    }
+
+    // Create stars for different sections
+    createStars(document.getElementById('stars'), 300);
+    createStars(document.getElementById('imax-stars'), 50);
+    createStars(document.getElementById('standard-stars'), 50);
+    
+    // Create parallax stars
+    function createParallaxStars() {
+      const container = document.getElementById('parallax-stars');
+      if (!container) return;
+      
+      for (let i = 0; i < 50; i++) {
+        const star = document.createElement('div');
+        star.className = 'absolute rounded-full bg-white';
+        const size = Math.random() * 3 + 1;
+        star.style.width = `${size}px`;
+        star.style.height = `${size}px`;
+        star.style.left = `${Math.random() * 100}%`;
+        star.style.top = `${Math.random() * 100}%`;
+        star.style.opacity = 0.3 + Math.random() * 0.7;
+        container.appendChild(star);
+        
+        // Add twinkling animation
+        gsap.to(star, {
+          opacity: 0.1,
+          duration: 1 + Math.random() * 3,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut"
+        });
+      }
+    }
+    
+    // Create parallax planets
+    function createParallaxPlanets() {
+      const container = document.getElementById('parallax-planets');
+      if (!container) return;
+      
+      const planetColors = ['#22d3ee', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444'];
+      
+      for (let i = 0; i < 5; i++) {
+        const planet = document.createElement('div');
+        planet.className = 'parallax-planet';
+        const size = Math.random() * 30 + 10;
+        planet.style.width = `${size}px`;
+        planet.style.height = `${size}px`;
+        planet.style.left = `${Math.random() * 100}%`;
+        planet.style.top = `${Math.random() * 100}%`;
+        planet.style.backgroundColor = planetColors[Math.floor(Math.random() * planetColors.length)];
+        container.appendChild(planet);
+        
+        // Add floating animation
+        gsap.to(planet, {
+          y: -10 - Math.random() * 20,
+          duration: 3 + Math.random() * 5,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut"
+        });
+      }
+    }
+    
+    // Create parallax asteroids
+    function createParallaxAsteroids() {
+      const container = document.getElementById('parallax-asteroids');
+      if (!container) return;
+      
+      for (let i = 0; i < 20; i++) {
+        const asteroid = document.createElement('div');
+        asteroid.className = 'absolute bg-gray-400 rounded-full';
+        const size = Math.random() * 5 + 2;
+        asteroid.style.width = `${size}px`;
+        asteroid.style.height = `${size}px`;
+        asteroid.style.left = `${Math.random() * 100}%`;
+        asteroid.style.top = `${Math.random() * 100}%`;
+        asteroid.style.opacity = 0.3 + Math.random() * 0.5;
+        container.appendChild(asteroid);
+        
+        // Add floating animation
+        gsap.to(asteroid, {
+          x: 20 - Math.random() * 40,
+          y: 20 - Math.random() * 40,
+          rotation: Math.random() * 360,
+          duration: 10 + Math.random() * 20,
+          repeat: -1,
+          yoyo: true,
+          ease: "sine.inOut"
+        });
+      }
+    }
+
+    // Generate Theater Seats
+    function generateSeats(container, rows, cols, premiumRows = 1, vipRows = 1) {
+      if (!container) return;
+      
+      container.innerHTML = '';
+      const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      
+      for (let row = 0; row < rows; row++) {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'col-span-12 flex justify-center gap-1 mb-2';
+        
+        for (let col = 1; col <= cols; col++) {
+          const seat = document.createElement('div');
+          const seatNumber = `${alphabet[row]}${col}`;
+          seat.className = 'seat rounded p-2 w-8';
+          seat.textContent = seatNumber;
+          
+          // Determine seat type
+          if (row < premiumRows) {
+            seat.classList.add('premium-seat');
+          } else if (row >= rows - vipRows) {
+            seat.classList.add('vip-seat');
+          } else {
+            seat.classList.add('bg-green-500', 'text-white');
+          }
+          
+          // Randomly occupy some seats
+          if (Math.random() < 0.3) {
+            seat.classList.add('occupied');
+          }
+          
+          seat.addEventListener('click', function() {
+            if (!this.classList.contains('occupied') && !this.classList.contains('booked')) {
+              sounds.click.play();
+              this.classList.toggle('selected');
+            }
+          });
+          
+          rowDiv.appendChild(seat);
+        }
+        
+        container.appendChild(rowDiv);
+      }
+    }
+
+    // Initialize seating
+    generateSeats(document.getElementById('imax-seats'), 5, 10, 1, 1);
+    generateSeats(document.getElementById('standard-seats'), 5, 8, 1, 1);
+
+    // Card Flip for Seating
+    function toggleFlip(cardId) {
+      sounds.click.play();
+      const card = document.getElementById(cardId);
+      if (card) {
+        card.classList.toggle('flipped');
+        // Add GSAP animation for smoother flip
+        gsap.to(card, {
+          duration: 0.8,
+          rotationY: card.classList.contains('flipped') ? 180 : 0,
+          ease: "power4.out"
+        });
+      }
+    }
+
+    // Book Tickets Function
+    function bookTickets(theaterType) {
+      sounds.click.play();
+      const seatContainer = document.getElementById(`${theaterType}-seats`);
+      const selectedSeats = seatContainer.querySelectorAll('.selected');
+      
+      if (selectedSeats.length === 0) {
+        alert('Please select at least one seat');
+        return;
+      }
+      
+      selectedSeats.forEach(seat => {
+        seat.classList.remove('selected');
+        seat.classList.add('booked');
+      });
+      
+      alert(`Successfully booked ${selectedSeats.length} seat(s)!`);
+      toggleFlip(`${theaterType}-card`);
+    }
+
+    // Book Page Animation with GSAP
+    let currentPage = 0;
+    const totalPages = 5;
+    const bookCover = document.getElementById('book-cover');
+    const pages = [
+      document.getElementById('page-1'),
+      document.getElementById('page-2'),
+      document.getElementById('page-3'),
+      document.getElementById('page-4'),
+      document.getElementById('page-5')
+    ];
+    const turnPageBtn = document.getElementById('turn-page-btn');
+
+    function turnPage() {
+      sounds.page.play();
+      if (currentPage === 0) {
+        // Open the book (turn cover)
+        gsap.to(bookCover, {
+          rotationY: -160,
+          duration: 1.5,
+          ease: "power4.out",
+          onComplete: () => {
+            currentPage = 1;
+            turnPageBtn.textContent = 'Turn Page';
+          }
+        });
+      } else if (currentPage < totalPages) {
+        // Turn to next page
+        gsap.to(pages[currentPage - 1], {
+          rotationY: -160,
+          duration: 1.5,
+          ease: "power4.out"
+        });
+        currentPage++;
+        if (currentPage === totalPages) {
+          turnPageBtn.textContent = 'Close Book';
+        }
+      } else {
+        // Close the book
+        for (let i = totalPages - 1; i >= 0; i--) {
+          gsap.to(pages[i], {
+            rotationY: 0,
+            duration: 1.5,
+            ease: "power4.out",
+            delay: (totalPages - 1 - i) * 0.3
+          });
+        }
+        gsap.to(bookCover, {
+          rotationY: 0,
+          duration: 1.5,
+          ease: "power4.out",
+          delay: (totalPages) * 0.3,
+          onComplete: () => {
+            currentPage = 0;
+            turnPageBtn.textContent = 'Open Book';
+          }
+        });
+      }
+    }
+
+    turnPageBtn.addEventListener('click', turnPage);
+
+    // Smooth Scroll to Sections
+    function scrollToSection(sectionId) {
+      sounds.click.play();
+      gsap.to(window, {
+        duration: 1.5,
+        scrollTo: `#${sectionId}`,
+        ease: "power3.inOut"
+      });
+    }
+    
+    // Timeline Interaction
+    const timelinePoints = document.querySelectorAll('.timeline-point');
+    const timelineProgress = document.getElementById('timeline-progress');
+    
+    timelinePoints.forEach(point => {
+      point.addEventListener('mouseenter', function() {
+        const year = this.getAttribute('data-year');
+        const position = this.style.left;
+        
+        gsap.to(timelineProgress, {
+          width: position,
+          duration: 0.5,
+          ease: "power2.out"
+        });
+        
+        gsap.to(this.querySelector('div'), {
+          scale: 1.5,
+          backgroundColor: '#3b82f6',
+          duration: 0.3
+        });
+      });
+      
+      point.addEventListener('mouseleave', function() {
+        gsap.to(this.querySelector('div'), {
+          scale: 1,
+          backgroundColor: '#3b82f6',
+          duration: 0.3
+        });
+      });
+    });
+    
+    // Actor Details Modal
+    function showActorDetails(actorId) {
+      sounds.click.play();
+      const modal = document.getElementById('actor-modal');
+      const content = document.getElementById('actor-details-content');
+      
+      // Actor details content
+      const actorDetails = {
+        damon: {
+          name: "Matt Damon",
+          role: "Odysseus",
+          bio: "Academy Award winner Matt Damon brings depth to the legendary hero, capturing both his strategic brilliance and human flaws. Damon trained for six months to perform his own stunts, including the famous bow contest scene shot in a single take.",
+          funFact: "Damon learned ancient Greek for the role and can recite the opening lines of The Odyssey in the original language."
+        },
+        zendaya: {
+          name: "Zendaya",
+          role: "Penelope",
+          bio: "Emmy winner Zendaya portrays Penelope with quiet strength, showcasing the character's intelligence and resilience as she fends off suitors while maintaining hope for her husband's return.",
+          funFact: "Zendaya learned traditional Greek weaving techniques to authentically portray Penelope's famous weaving scenes."
+        },
+        holland: {
+          name: "Tom Holland",
+          role: "Telemachus",
+          bio: "Holland brings youthful energy to Telemachus' coming-of-age journey, showing the character's transformation from uncertain boy to confident leader.",
+          funFact: "Holland performed all his own stunts in the film, including an impressive archery sequence that took 47 takes to perfect."
+        },
+        hathaway: {
+          name: "Anne Hathaway",
+          role: "Circe",
+          bio: "Oscar winner Hathaway delivers a mesmerizing performance as the seductive yet tragic Circe. Her scenes feature innovative practical effects that visually represent her magic.",
+          funFact: "Hathaway studied animal behavior for months to create the unique movements for Circe's transformation sequences."
+        },
+        pattinson: {
+          name: "Robert Pattinson",
+          role: "Athena",
+          bio: "In a gender-bent interpretation, Pattinson plays Athena as a mysterious, androgynous figure who guides Odysseus with cryptic advice.",
+          funFact: "Pattinson worked with movement coaches to develop a distinctive physicality that suggests Athena's divine nature without relying on special effects."
+        },
+        theron: {
+          name: "Charlize Theron",
+          role: "Poseidon",
+          bio: "Theron's commanding presence brings terrifying majesty to Poseidon, portrayed as a mercurial deity whose wrath manifests in spectacular practical-effect storm sequences.",
+          funFact: "Theron performed underwater for up to 4 minutes at a time during the filming of Poseidon's storm sequences."
+        }
+      };
+      
+      // Create modal content
+      let modalHTML = `
+        <h2 class="text-3xl font-bold text-blue-700 mb-4">${actorDetails[actorId].name}</h2>
+        <h3 class="text-xl text-amber-600 mb-6">as ${actorDetails[actorId].role}</h3>
+        <p class="text-gray-700 mb-6">${actorDetails[actorId].bio}</p>
+        <div class="bg-blue-50 p-4 rounded-lg">
+          <h4 class="font-bold text-blue-700 mb-2">Fun Fact:</h4>
+          <p class="text-blue-900">${actorDetails[actorId].funFact}</p>
+        </div>
+      `;
+      
+      content.innerHTML = modalHTML;
+      modal.classList.remove('hidden');
+    }
+    
+    // Close actor modal
+    document.getElementById('close-modal').addEventListener('click', function() {
+      sounds.click.play();
+      document.getElementById('actor-modal').classList.add('hidden');
+    });
+    
+    // Trailer Modal
+    function playTrailer() {
+  sounds.click.play();
+  document.getElementById('trailer-modal').classList.remove('hidden');
+
+  const placeholder = document.getElementById('trailer-placeholder');
+  placeholder.innerHTML = `
+    <iframe 
+      class="absolute top-0 left-0 w-full h-full"
+      src="https://www.youtube.com/embed/i3j6l8zQSks?autoplay=1&rel=0&showinfo=0"
+      title="YouTube trailer"
+      frameborder="0"
+      allow="autoplay; encrypted-media"
+      allowfullscreen>
+    </iframe>
+  `;
+}
+
+    
+document.getElementById('close-trailer').addEventListener('click', function () {
+  sounds.click.play();
+  document.getElementById('trailer-modal').classList.add('hidden');
+  document.getElementById('trailer-placeholder').innerHTML = `
+    <div class="absolute inset-0 flex items-center justify-center">
+      <div class="text-white text-xl">Trailer would play here</div>
+    </div>
+  `;
+});
+
+    
+    // 3D Space Scene with Three.js
+    function initSpaceScene() {
+      const container = document.getElementById('space-scene');
+      
+      // Create scene, camera, and renderer
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+      
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      container.appendChild(renderer.domElement);
+      
+      // Add stars
+      const starsGeometry = new THREE.BufferGeometry();
+      const starsMaterial = new THREE.PointsMaterial({
+        color: 0xffffff,
+        size: 0.1,
+        transparent: true
+      });
+      
+      const starsVertices = [];
+      for (let i = 0; i < 10000; i++) {
+        const x = (Math.random() - 0.5) * 2000;
+        const y = (Math.random() - 0.5) * 2000;
+        const z = (Math.random() - 0.5) * 2000;
+        starsVertices.push(x, y, z);
+      }
+      
+      starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+      const stars = new THREE.Points(starsGeometry, starsMaterial);
+      scene.add(stars);
+      
+      // Add ambient light
+      const ambientLight = new THREE.AmbientLight(0x404040);
+      scene.add(ambientLight);
+      
+      // Add directional light
+      const directionalLight = new THREE.DirectionalLight(0x22d3ee, 1);
+      directionalLight.position.set(1, 1, 1);
+      scene.add(directionalLight);
+      
+      // Position camera
+      camera.position.z = 5;
+      
+      // Animation loop
+      function animate() {
+        requestAnimationFrame(animate);
+        
+        stars.rotation.x += 0.0001;
+        stars.rotation.y += 0.0001;
+        
+        renderer.render(scene, camera);
+      }
+      
+      animate();
+      
+      // Handle window resize
+      window.addEventListener('resize', function() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+    }
+    
+    // Interactive Spaceship
+    function initInteractiveSpaceship() {
+      const container = document.getElementById('interactive-spaceship');
+      if (!container) return;
+      
+      // Create scene, camera, and renderer
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+      
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setClearColor(0x000000, 0);
+      container.appendChild(renderer.domElement);
+      
+      // Create a simple spaceship model
+      const geometry = new THREE.ConeGeometry(1, 4, 8);
+      const material = new THREE.MeshPhongMaterial({ 
+        color: 0x22d3ee,
+        emissive: 0x0a0a23,
+        specular: 0xffffff,
+        shininess: 100
+      });
+      const spaceship = new THREE.Mesh(geometry, material);
+      spaceship.rotation.x = Math.PI / 2;
+      scene.add(spaceship);
+      
+      // Add wings
+      const wingGeometry = new THREE.BoxGeometry(3, 0.2, 1);
+      const wingMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0x3b82f6,
+        emissive: 0x0a0a23,
+        specular: 0xffffff,
+        shininess: 100
+      });
+      const wing1 = new THREE.Mesh(wingGeometry, wingMaterial);
+      wing1.position.set(0, 0, 0);
+      spaceship.add(wing1);
+      
+      // Add engine glow
+      const engineGeometry = new THREE.SphereGeometry(0.5, 16, 16);
+      const engineMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xf97316,
+        transparent: true,
+        opacity: 0.8
+      });
+      const engine = new THREE.Mesh(engineGeometry, engineMaterial);
+      engine.position.set(0, -2, 0);
+      spaceship.add(engine);
+      
+      // Add lights
+      const ambientLight = new THREE.AmbientLight(0x404040);
+      scene.add(ambientLight);
+      
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+      directionalLight.position.set(1, 1, 1);
+      scene.add(directionalLight);
+      
+      // Add point light for engine glow
+      const engineLight = new THREE.PointLight(0xf97316, 1, 10);
+      engineLight.position.set(0, -2, 0);
+      spaceship.add(engineLight);
+      
+      // Position camera and spaceship
+      camera.position.z = 10;
+      spaceship.position.set(-15, 0, 0);
+      
+      // Make spaceship follow mouse
+      let targetX = 0;
+      let targetY = 0;
+      
+      document.addEventListener('mousemove', function(e) {
+        targetX = (e.clientX / window.innerWidth) * 2 - 1;
+        targetY = -(e.clientY / window.innerHeight) * 2 + 1;
+      });
+      
+      // Animation loop
+      function animate() {
+        requestAnimationFrame(animate);
+        
+        // Smooth follow
+        spaceship.position.x += (targetX * 5 - spaceship.position.x) * 0.05;
+        spaceship.position.y += (targetY * 3 - spaceship.position.y) * 0.05;
+        
+        // Tilt based on movement
+        spaceship.rotation.z = -targetX * 0.5;
+        spaceship.rotation.y = -targetX * 0.5;
+        
+        // Pulse engine glow
+        engine.scale.set(
+          1 + 0.1 * Math.sin(Date.now() * 0.005),
+          1 + 0.1 * Math.sin(Date.now() * 0.005),
+          1 + 0.1 * Math.sin(Date.now() * 0.005)
+        );
+        
+        renderer.render(scene, camera);
+      }
+      
+      animate();
+      
+      // Handle window resize
+      window.addEventListener('resize', function() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+    }
+    
+    // 3D Spaceship Model
+    function initSpaceshipModel() {
+      const container = document.getElementById('spaceship-model');
+      if (!container) return;
+      
+      // Create scene, camera, and renderer
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.setClearColor(0xbfdbfe);
+      container.appendChild(renderer.domElement);
+      
+      // Add lights
+      const ambientLight = new THREE.AmbientLight(0x404040);
+      scene.add(ambientLight);
+      
+      const directionalLight = new THREE.DirectionalLight(0x22d3ee, 1);
+      directionalLight.position.set(1, 1, 1);
+      scene.add(directionalLight);
+      
+      // Create a more complex spaceship model
+      const shipGroup = new THREE.Group();
+      
+      // Main body
+      const bodyGeometry = new THREE.CylinderGeometry(1, 2, 8, 16);
+      const bodyMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0x3b82f6,
+        emissive: 0x0a0a23,
+        specular: 0xffffff,
+        shininess: 100
+      });
+      const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+      body.rotation.x = Math.PI / 2;
+      shipGroup.add(body);
+      
+      // Cockpit
+      const cockpitGeometry = new THREE.SphereGeometry(1.2, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2);
+      const cockpitMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0x22d3ee,
+        transparent: true,
+        opacity: 0.8,
+        specular: 0xffffff,
+        shininess: 100
+      });
+      const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
+      cockpit.position.set(0, 0, 4);
+      cockpit.rotation.x = Math.PI / 2;
+      shipGroup.add(cockpit);
+      
+      // Wings
+      const wingGeometry = new THREE.BoxGeometry(6, 0.2, 3);
+      const wingMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0x0284c7,
+        emissive: 0x0a0a23,
+        specular: 0xffffff,
+        shininess: 100
+      });
+      const wings = new THREE.Mesh(wingGeometry, wingMaterial);
+      wings.position.set(0, 0, 0);
+      shipGroup.add(wings);
+      
+      // Engines
+      const engineGeometry = new THREE.CylinderGeometry(0.5, 0.8, 2, 16);
+      const engineMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0x64748b,
+        emissive: 0x0a0a23,
+        specular: 0xffffff,
+        shininess: 100
+      });
+      
+      const engine1 = new THREE.Mesh(engineGeometry, engineMaterial);
+      engine1.position.set(-2, 0, -4);
+      engine1.rotation.x = Math.PI / 2;
+      shipGroup.add(engine1);
+      
+      const engine2 = new THREE.Mesh(engineGeometry, engineMaterial);
+      engine2.position.set(2, 0, -4);
+      engine2.rotation.x = Math.PI / 2;
+      shipGroup.add(engine2);
+      
+      // Engine glow
+      const glowGeometry = new THREE.SphereGeometry(0.4, 16, 16);
+      const glowMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0xf97316,
+        transparent: true,
+        opacity: 0.8
+      });
+      
+      const glow1 = new THREE.Mesh(glowGeometry, glowMaterial);
+      glow1.position.set(-2, 0, -5);
+      shipGroup.add(glow1);
+      
+      const glow2 = new THREE.Mesh(glowGeometry, glowMaterial);
+      glow2.position.set(2, 0, -5);
+      shipGroup.add(glow2);
+      
+      // Add point lights for engine glow
+      const engineLight1 = new THREE.PointLight(0xf97316, 1, 5);
+      engineLight1.position.set(-2, 0, -5);
+      shipGroup.add(engineLight1);
+      
+      const engineLight2 = new THREE.PointLight(0xf97316, 1, 5);
+      engineLight2.position.set(2, 0, -5);
+      shipGroup.add(engineLight2);
+      
+      scene.add(shipGroup);
+      
+      // Add stars
+      const starsGeometry = new THREE.BufferGeometry();
+      const starsMaterial = new THREE.PointsMaterial({
+        color: 0xffffff,
+        size: 0.1,
+        transparent: true
+      });
+      
+      const starsVertices = [];
+      for (let i = 0; i < 1000; i++) {
+        const x = (Math.random() - 0.5) * 100;
+        const y = (Math.random() - 0.5) * 100;
+        const z = (Math.random() - 0.5) * 100;
+        starsVertices.push(x, y, z);
+      }
+      
+      starsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starsVertices, 3));
+      const stars = new THREE.Points(starsGeometry, starsMaterial);
+      scene.add(stars);
+      
+      // Add orbit controls
+      const controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      
+      // Position camera
+      camera.position.z = 15;
+      
+      // Auto rotation flag
+      let autoRotate = false;
+      let lightsOn = true;
+      
+      // Animation loop
+      function animate() {
+        requestAnimationFrame(animate);
+        
+        if (autoRotate) {
+          shipGroup.rotation.y += 0.01;
+        }
+        
+        // Pulse engine glow
+        const pulseScale = 1 + 0.2 * Math.sin(Date.now() * 0.005);
+        glow1.scale.set(pulseScale, pulseScale, pulseScale);
+        glow2.scale.set(pulseScale, pulseScale, pulseScale);
+        
+        engineLight1.intensity = 1 + 0.5 * Math.sin(Date.now() * 0.005);
+        engineLight2.intensity = 1 + 0.5 * Math.sin(Date.now() * 0.005);
+        
+        controls.update();
+        renderer.render(scene, camera);
+      }
+      
+      animate();
+      
+      // Handle window resize
+      window.addEventListener('resize', function() {
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+      });
+      
+      // Toggle auto rotation
+      document.getElementById('rotate-model').addEventListener('click', function() {
+        sounds.click.play();
+        autoRotate = !autoRotate;
+        this.textContent = autoRotate ? 'Stop Rotation' : 'Auto Rotate';
+      });
+      
+      // Reset view
+      document.getElementById('reset-model').addEventListener('click', function() {
+        sounds.click.play();
+        camera.position.set(0, 0, 15);
+        controls.reset();
+      });
+      
+      // Toggle lights
+      document.getElementById('toggle-lights').addEventListener('click', function() {
+        sounds.click.play();
+        lightsOn = !lightsOn;
+        directionalLight.intensity = lightsOn ? 1 : 0.2;
+        ambientLight.intensity = lightsOn ? 0.4 : 0.1;
+        this.textContent = lightsOn ? 'Dim Lights' : 'Brighten Lights';
+      });
+    }
+    
+    // 3D Ticket Model
+    function initTicketModel() {
+      const container = document.getElementById('ticket-model');
+      if (!container) return;
+      
+      // Create scene, camera, and renderer
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      
+      renderer.setSize(container.clientWidth, container.clientHeight);
+      renderer.setClearColor(0xf0f9ff);
+      container.appendChild(renderer.domElement);
+      
+      // Add lights
+      const ambientLight = new THREE.AmbientLight(0x404040);
+      scene.add(ambientLight);
+      
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+      directionalLight.position.set(1, 1, 1);
+      scene.add(directionalLight);
+      
+      // Create a ticket model
+      const ticketGroup = new THREE.Group();
+      
+      // Main ticket
+      const ticketGeometry = new THREE.BoxGeometry(5, 3, 0.1);
+      const ticketMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0x3b82f6,
+        emissive: 0x0a0a23,
+        specular: 0xffffff,
+        shininess: 100
+      });
+      const ticket = new THREE.Mesh(ticketGeometry, ticketMaterial);
+      ticketGroup.add(ticket);
+      
+      // Ticket header
+      const headerGeometry = new THREE.BoxGeometry(4.5, 0.5, 0.11);
+      const headerMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0x0284c7,
+        emissive: 0x0a0a23,
+        specular: 0xffffff,
+        shininess: 100
+      });
+      const header = new THREE.Mesh(headerGeometry, headerMaterial);
+      header.position.set(0, 1, 0);
+      ticketGroup.add(header);
+      
+      // Ticket details
+      const detailGeometry = new THREE.BoxGeometry(4.5, 0.5, 0.11);
+      const detailMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0xf97316,
+        emissive: 0x0a0a23,
+        specular: 0xffffff,
+        shininess: 100
+      });
+      const detail = new THREE.Mesh(detailGeometry, detailMaterial);
+      detail.position.set(0, 0, 0);
+      ticketGroup.add(detail);
+      
+      // Ticket barcode
+      const barcodeGeometry = new THREE.BoxGeometry(4, 0.8, 0.11);
+      const barcodeMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0xffffff,
+        emissive: 0x0a0a23,
+        specular: 0xffffff,
+        shininess: 100
+      });
+      const barcode = new THREE.Mesh(barcodeGeometry, barcodeMaterial);
+      barcode.position.set(0, -1, 0);
+      ticketGroup.add(barcode);
+      
+      // Create barcode lines
+      for (let i = 0; i < 20; i++) {
+        const lineWidth = Math.random() * 0.1 + 0.05;
+        const lineHeight = Math.random() * 0.7 + 0.1;
+        const lineGeometry = new THREE.BoxGeometry(lineWidth, lineHeight, 0.12);
+        const lineMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+        const line = new THREE.Mesh(lineGeometry, lineMaterial);
+        line.position.set((Math.random() - 0.5) * 3.5, -1, 0);
+        ticketGroup.add(line);
+      }
+      
+      // Add holographic effect
+      const holoGeometry = new THREE.CircleGeometry(0.5, 32);
+      const holoMaterial = new THREE.MeshPhongMaterial({ 
+        color: 0x22d3ee,
+        emissive: 0x22d3ee,
+        specular: 0xffffff,
+        shininess: 100,
+        transparent: true,
+        opacity: 0.7
+      });
+      const holo = new THREE.Mesh(holoGeometry, holoMaterial);
+      holo.position.set(1.5, 0.5, 0.06);
+      holo.rotation.x = -Math.PI / 2;
+      ticketGroup.add(holo);
+      
+      scene.add(ticketGroup);
+      
+      // Add orbit controls
+      const controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      
+      // Position camera
+      camera.position.z = 5;
+      
+      // Make ticket interactive
+      container.addEventListener('mousemove', function(e) {
+        const rect = container.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / container.clientWidth) * 2 - 1;
+        const y = -((e.clientY - rect.top) / container.clientHeight) * 2 + 1;
+        
+        gsap.to(ticketGroup.rotation, {
+          x: y * 0.3,
+          y: x * 0.5,
+          duration: 0.5
+        });
+      });
+      
+      // Animation loop
+      function animate() {
+        requestAnimationFrame(animate);
+        
+        // Animate holographic effect
+        holo.rotation.z += 0.01;
+        holo.material.emissive.setHSL((Date.now() % 6000) / 6000, 1, 0.5);
+        
+        controls.update();
+        renderer.render(scene, camera);
+      }
+      
+      animate();
+      
+      // Handle window resize
+      window.addEventListener('resize', function() {
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+      });
+    }
+    
+    // Initialize all 3D scenes
+    window.addEventListener('load', function() {
+      initSpaceScene();
+      initInteractiveSpaceship();
+      initSpaceshipModel();
+      initTicketModel();
+      createParallaxStars();
+      createParallaxPlanets();
+      createParallaxAsteroids();
+    });
+  </script>
+</body>
+</html>
